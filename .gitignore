@@ -1,0 +1,45 @@
+# =====================
+# Python
+# =====================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# =====================
+# Virtual environments
+# =====================
+.venv/
+.env/
+
+# =====================
+# Jupyter
+# =====================
+.ipynb_checkpoints/
+
+# =====================
+# Outputs / training artifacts
+# =====================
+outputs/
+data/processed/
+*.pt
+*.pth
+*.ckpt
+*.log
+
+# =====================
+# Experiments / temp
+# =====================
+runs/
+wandb/
+
+# =====================
+# VS Code / editor
+# =====================
+.vscode/
+
+# =====================
+# OS
+# =====================
+.DS_Store
+
