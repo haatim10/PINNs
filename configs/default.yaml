@@ -1,55 +1,49 @@
-# PI-fMI-Fractional-PDE Configuration
+# PI-fMI Configuration - Using proper L1 scheme with reduced grid for speed
 
-# Problem parameters
 problem:
-  alpha: 0.5                    # Fractional order (0 < alpha < 1)
-  T: 1.0                        # Final time
-  x_min: 0.0                    # Spatial domain left boundary
-  x_max: 1.0                    # Spatial domain right boundary
+  alpha: 0.5
+  beta: 2.0
+  x_min: 0.0
+  x_max: 1.0
+  t_min: 0.0
+  t_max: 1.0
 
-# Mesh parameters
-mesh:
-  N_t: 100                      # Number of time steps
-  N_x: 50                       # Number of spatial points
-  grading_r: 2.0                # Mesh grading parameter (r >= 1)
+discretization:
+  N_x: 100          # Reduced from 500 for speed with full L1
+  N_t: 100          # Reduced from 500 for speed with full L1
+  N_collocation: 200  # Reduced for speed
+  N_boundary: 50
+  N_initial: 50
 
-# Neural network architecture
-model:
-  hidden_layers: [64, 64, 64]   # Hidden layer sizes
-  activation: tanh              # Activation function: tanh, relu, gelu
-  input_dim: 2                  # (t, x)
-  output_dim: 1                 # u(t, x)
+network:
+  input_dim: 2
+  output_dim: 1
+  hidden_layers: [64, 64, 64, 64]
+  activation: tanh
 
-# Training parameters
 training:
-  epochs: 10000
+  epochs: 20000
   learning_rate: 0.001
-  weight_decay: 0.0
+  optimizer: adam
   scheduler:
-    type: StepLR                # StepLR, CosineAnnealing, ReduceLROnPlateau
-    step_size: 2000
+    enabled: true
+    type: step
+    step_size: 5000
     gamma: 0.5
+  weights:
+    pde: 1.0
+    bc: 10.0
+    ic: 10.0
 
-# Loss weights
-loss:
-  lambda_pde: 1.0               # PDE residual weight
-  lambda_ic: 10.0               # Initial condition weight
-  lambda_bc: 10.0               # Boundary condition weight
-
-# Collocation points
-collocation:
-  N_pde: 5000                   # Interior collocation points
-  N_ic: 200                     # Initial condition points
-  N_bc: 200                     # Boundary condition points
-
-# Logging and checkpointing
 logging:
-  log_every: 100                # Log every N epochs
-  save_every: 1000              # Save checkpoint every N epochs
-  output_dir: outputs
+  print_interval: 100
+  eval_interval: 1000
+  checkpoint_interval: 5000
 
-# Device
-device: cuda                    # cuda or cpu
+paths:
+  checkpoint_dir: outputs/checkpoints
+  log_dir: outputs/logs
+  figure_dir: outputs/figures
 
-# Random seed
+device: cuda
 seed: 42
