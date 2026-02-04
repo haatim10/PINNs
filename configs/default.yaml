@@ -1,0 +1,55 @@
+# PI-fMI-Fractional-PDE Configuration
+
+# Problem parameters
+problem:
+  alpha: 0.5                    # Fractional order (0 < alpha < 1)
+  T: 1.0                        # Final time
+  x_min: 0.0                    # Spatial domain left boundary
+  x_max: 1.0                    # Spatial domain right boundary
+
+# Mesh parameters
+mesh:
+  N_t: 100                      # Number of time steps
+  N_x: 50                       # Number of spatial points
+  grading_r: 2.0                # Mesh grading parameter (r >= 1)
+
+# Neural network architecture
+model:
+  hidden_layers: [64, 64, 64]   # Hidden layer sizes
+  activation: tanh              # Activation function: tanh, relu, gelu
+  input_dim: 2                  # (t, x)
+  output_dim: 1                 # u(t, x)
+
+# Training parameters
+training:
+  epochs: 10000
+  learning_rate: 0.001
+  weight_decay: 0.0
+  scheduler:
+    type: StepLR                # StepLR, CosineAnnealing, ReduceLROnPlateau
+    step_size: 2000
+    gamma: 0.5
+
+# Loss weights
+loss:
+  lambda_pde: 1.0               # PDE residual weight
+  lambda_ic: 10.0               # Initial condition weight
+  lambda_bc: 10.0               # Boundary condition weight
+
+# Collocation points
+collocation:
+  N_pde: 5000                   # Interior collocation points
+  N_ic: 200                     # Initial condition points
+  N_bc: 200                     # Boundary condition points
+
+# Logging and checkpointing
+logging:
+  log_every: 100                # Log every N epochs
+  save_every: 1000              # Save checkpoint every N epochs
+  output_dir: outputs
+
+# Device
+device: cuda                    # cuda or cpu
+
+# Random seed
+seed: 42
