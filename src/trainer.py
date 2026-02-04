@@ -1,219 +1,124 @@
-"""Training loop with logging."""
+"""Trainer Module"""
 
 import torch
-import torch.nn as nn
-from torch.optim import Adam
-from torch.optim.lr_scheduler import StepLR, CosineAnnealingLR, ReduceLROnPlateau
-from typing import Dict, Optional
-from pathlib import Path
-import json
+import torch.optim as optim
+from torch.optim.lr_scheduler import StepLR
 from tqdm import tqdm
+import time
+from pathlib import Path
 
-from .model import PINN
-from .loss import PINNLoss
-from .dataset import CollocationDataset
+from .utils import compute_errors, ensure_dirs
 
 
 class Trainer:
-    """PINN Trainer with logging and checkpointing."""
-
-    def __init__(
-        self,
-        model: PINN,
-        loss_fn: PINNLoss,
-        dataset: CollocationDataset,
-        config: Dict,
-        output_dir: str = "outputs",
-    ):
-        """
-        Initialize trainer.
-
-        Args:
-            model: PINN model
-            loss_fn: Loss function
-            dataset: Collocation dataset
-            config: Training configuration
-            output_dir: Directory for outputs
-        """
+    def __init__(self, model, loss_fn, dataset, config, device="cpu"):
         self.model = model
         self.loss_fn = loss_fn
         self.dataset = dataset
         self.config = config
-
-        # Setup output directories
-        self.output_dir = Path(output_dir)
-        self.checkpoint_dir = self.output_dir / "checkpoints"
-        self.log_dir = self.output_dir / "logs"
-        self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
-        self.log_dir.mkdir(parents=True, exist_ok=True)
-
-        # Setup optimizer
-        train_cfg = config.get("training", {})
-        self.optimizer = Adam(
-            model.parameters(),
-            lr=train_cfg.get("learning_rate", 1e-3),
-            weight_decay=train_cfg.get("weight_decay", 0.0),
-        )
-
-        # Setup scheduler
-        self.scheduler = self._setup_scheduler(train_cfg)
-
-        # Training state
-        self.epoch = 0
-        self.best_loss = float("inf")
-        self.history = {"total": [], "pde": [], "ic": [], "bc": [], "lr": []}
-
-    def _setup_scheduler(self, train_cfg: Dict):
-        """Setup learning rate scheduler."""
-        sched_cfg = train_cfg.get("scheduler", {})
-        sched_type = sched_cfg.get("type", "StepLR")
-
-        if sched_type == "StepLR":
-            return StepLR(
+        self.device = device
+        
+        train_config = config.get('training', {})
+        self.epochs = train_config.get('epochs', 20000)
+        self.learning_rate = train_config.get('learning_rate', 0.001)
+        
+        self.optimizer = optim.Adam(model.parameters(), lr=self.learning_rate)
+        
+        scheduler_config = train_config.get('scheduler', {})
+        if scheduler_config.get('enabled', True):
+            self.scheduler = StepLR(
                 self.optimizer,
-                step_size=sched_cfg.get("step_size", 2000),
-                gamma=sched_cfg.get("gamma", 0.5),
-            )
-        elif sched_type == "CosineAnnealing":
-            return CosineAnnealingLR(
-                self.optimizer,
-                T_max=train_cfg.get("epochs", 10000),
-            )
-        elif sched_type == "ReduceLROnPlateau":
-            return ReduceLROnPlateau(
-                self.optimizer,
-                patience=sched_cfg.get("patience", 500),
-                factor=sched_cfg.get("gamma", 0.5),
+                step_size=scheduler_config.get('step_size', 5000),
+                gamma=scheduler_config.get('gamma', 0.5)
             )
         else:
-            return None
-
-    def train_epoch(self) -> Dict[str, float]:
-        """Train for one epoch."""
+            self.scheduler = None
+        
+        log_config = config.get('logging', {})
+        self.print_interval = log_config.get('print_interval', 100)
+        self.eval_interval = log_config.get('eval_interval', 1000)
+        
+        paths = config.get('paths', {})
+        self.checkpoint_dir = Path(paths.get('checkpoint_dir', 'outputs/checkpoints'))
+        self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
+        
+        self.loss_history = {'total': [], 'pde': [], 'bc': [], 'ic': []}
+        self.error_history = {'l2': [], 'linf': []}
+        self.eval_epochs = []
+        
+        prob_config = config.get('problem', {})
+        self.alpha = prob_config.get('alpha', 0.5)
+        
+        disc_config = config.get('discretization', {})
+        self.N_x = disc_config.get('N_x', 100)
+        self.N_t = disc_config.get('N_t', 100)
+        
+    def train_step(self, data):
         self.model.train()
-
-        # Get batch data
-        data = self.dataset.get_batch()
-
-        # Zero gradients
         self.optimizer.zero_grad()
-
-        # Compute loss
-        losses = self.loss_fn(self.model, data)
-
-        # Backward pass
-        losses["total"].backward()
-
-        # Gradient clipping (optional)
+        losses = self.loss_fn(data)
+        losses.total.backward()
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
-
-        # Update weights
         self.optimizer.step()
-
-        # Update scheduler
-        if self.scheduler is not None:
-            if isinstance(self.scheduler, ReduceLROnPlateau):
-                self.scheduler.step(losses["total"])
-            else:
-                self.scheduler.step()
-
-        return {k: v.item() for k, v in losses.items()}
-
-    def train(
-        self,
-        epochs: int,
-        log_every: int = 100,
-        save_every: int = 1000,
-        resample_every: Optional[int] = None,
-    ):
-        """
-        Full training loop.
-
-        Args:
-            epochs: Number of epochs
-            log_every: Logging frequency
-            save_every: Checkpoint save frequency
-            resample_every: Resample PDE points every N epochs (None to disable)
-        """
-        pbar = tqdm(range(epochs), desc="Training")
-
+        return losses
+    
+    def evaluate(self):
+        x = torch.linspace(0, 1, self.N_x, dtype=torch.float64, device=self.device)
+        t = torch.linspace(0, 1, self.N_t + 1, dtype=torch.float64, device=self.device)
+        X, T = torch.meshgrid(x, t, indexing='ij')
+        return compute_errors(self.model, X.flatten(), T.flatten(), self.alpha, self.device)
+    
+    def train(self, verbose=True):
+        print("=" * 60)
+        print("Starting Training")
+        print(f"Device: {self.device}")
+        print(f"Epochs: {self.epochs}")
+        print("=" * 60)
+        
+        start_time = time.time()
+        pbar = tqdm(range(1, self.epochs + 1), desc="Training", disable=not verbose)
+        
         for epoch in pbar:
-            self.epoch = epoch
-
-            # Resample PDE points periodically
-            if resample_every is not None and epoch > 0 and epoch % resample_every == 0:
-                self.dataset.resample_pde_points()
-
-            # Train one epoch
-            losses = self.train_epoch()
-
-            # Record history
-            current_lr = self.optimizer.param_groups[0]["lr"]
-            self.history["total"].append(losses["total"])
-            self.history["pde"].append(losses["pde"])
-            self.history["ic"].append(losses["ic"])
-            self.history["bc"].append(losses["bc"])
-            self.history["lr"].append(current_lr)
-
-            # Update progress bar
-            pbar.set_postfix(
-                loss=f"{losses['total']:.2e}",
-                pde=f"{losses['pde']:.2e}",
-                ic=f"{losses['ic']:.2e}",
-                bc=f"{losses['bc']:.2e}",
-            )
-
-            # Logging
-            if epoch % log_every == 0:
-                self._log_metrics(epoch, losses)
-
-            # Save checkpoint
-            if epoch % save_every == 0 and epoch > 0:
-                self.save_checkpoint(f"checkpoint_epoch_{epoch}.pt")
-
-            # Save best model
-            if losses["total"] < self.best_loss:
-                self.best_loss = losses["total"]
-                self.save_checkpoint("best_model.pt")
-
-        # Save final model
-        self.save_checkpoint("final_model.pt")
-        self._save_history()
-
-    def _log_metrics(self, epoch: int, losses: Dict[str, float]):
-        """Log metrics to console."""
-        lr = self.optimizer.param_groups[0]["lr"]
-        print(
-            f"Epoch {epoch}: Loss={losses['total']:.4e}, "
-            f"PDE={losses['pde']:.4e}, IC={losses['ic']:.4e}, "
-            f"BC={losses['bc']:.4e}, LR={lr:.2e}"
-        )
-
-    def save_checkpoint(self, filename: str):
-        """Save model checkpoint."""
-        checkpoint = {
-            "epoch": self.epoch,
-            "model_state_dict": self.model.state_dict(),
-            "optimizer_state_dict": self.optimizer.state_dict(),
-            "best_loss": self.best_loss,
-            "config": self.config,
+            data = self.dataset.get_training_data()
+            losses = self.train_step(data)
+            
+            self.loss_history['total'].append(losses.total.item())
+            self.loss_history['pde'].append(losses.pde.item())
+            self.loss_history['bc'].append(losses.bc.item())
+            self.loss_history['ic'].append(losses.ic.item())
+            
+            if self.scheduler:
+                self.scheduler.step()
+            
+            if epoch % self.eval_interval == 0 or epoch == 1:
+                l2_error, linf_error = self.evaluate()
+                self.error_history['l2'].append(l2_error)
+                self.error_history['linf'].append(linf_error)
+                self.eval_epochs.append(epoch)
+                
+                if verbose:
+                    print(f"\nEpoch {epoch}: Loss={losses.total.item():.4e}, L2={l2_error:.4e}, Linf={linf_error:.4e}")
+            
+            pbar.set_postfix({'Loss': f'{losses.total.item():.2e}'})
+        
+        total_time = time.time() - start_time
+        
+        print("=" * 60)
+        print(f"Training Complete! Time: {total_time:.2f}s")
+        print(f"Final L2 Error: {self.error_history['l2'][-1]:.6e}")
+        print(f"Final Linf Error: {self.error_history['linf'][-1]:.6e}")
+        print("=" * 60)
+        
+        torch.save({
+            'model_state_dict': self.model.state_dict(),
+            'config': self.config,
+            'loss_history': self.loss_history,
+            'error_history': self.error_history,
+        }, self.checkpoint_dir / 'final_model.pt')
+        
+        return {
+            'final_l2_error': self.error_history['l2'][-1],
+            'final_linf_error': self.error_history['linf'][-1],
+            'loss_history': self.loss_history,
+            'error_history': self.error_history,
         }
-        if self.scheduler is not None:
-            checkpoint["scheduler_state_dict"] = self.scheduler.state_dict()
-
-        torch.save(checkpoint, self.checkpoint_dir / filename)
-
-    def load_checkpoint(self, filepath: str):
-        """Load model checkpoint."""
-        checkpoint = torch.load(filepath)
-        self.model.load_state_dict(checkpoint["model_state_dict"])
-        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-        self.epoch = checkpoint["epoch"]
-        self.best_loss = checkpoint["best_loss"]
-        if self.scheduler is not None and "scheduler_state_dict" in checkpoint:
-            self.scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
-
-    def _save_history(self):
-        """Save training history to JSON."""
-        with open(self.log_dir / "training_history.json", "w") as f:
-            json.dump(self.history, f, indent=2)
