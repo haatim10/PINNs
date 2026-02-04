@@ -60,4 +60,30 @@ class PINN(nn.Module):
         return self.network(inputs)
     
     def count_parameters(self) -> int:
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)            layers.append(self.activation)
+            prev_dim = hidden_dim
+            
+        layers.append(nn.Linear(prev_dim, output_dim))
+        self.network = nn.Sequential(*layers)
+        
+        self._initialize_weights()
+        self.to(device)
+        self.double()
+        
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_normal_(m.weight)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+                    
+    def forward(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+        if x.dim() == 1:
+            x = x.unsqueeze(-1)
+        if t.dim() == 1:
+            t = t.unsqueeze(-1)
+        inputs = torch.cat([x, t], dim=-1)
+        return self.network(inputs)
+    
+    def count_parameters(self) -> int:
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
