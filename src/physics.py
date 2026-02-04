@@ -1,142 +1,110 @@
-"""Fractional derivative and residual computation."""
+"""
+Physics Module: Fractional Derivative and PDE Residual
+Full L1 Scheme Implementation from the Paper
+"""
 
 import torch
 import numpy as np
-from typing import Callable
+from scipy.special import gamma
 
 
-def caputo_derivative_l1(
-    u_history: torch.Tensor,
-    t: torch.Tensor,
-    alpha: float,
-    n: int,
-) -> torch.Tensor:
+class PDEResidual:
     """
-    Compute Caputo fractional derivative using L1 scheme.
-
-    D_t^alpha u(t_n) ≈ (1/Γ(2-α)) * Σ_{k=0}^{n-1} a_{n,k} * (u_{k+1} - u_k)
-
-    Args:
-        u_history: Solution values at mesh points, shape (n+1, ...)
-        t: Time mesh points, shape (n+1,)
-        alpha: Fractional order (0 < alpha < 1)
-        n: Current time index
-
-    Returns:
-        Approximation of D_t^alpha u(t_n)
+    Computes PDE residual using the full L1 scheme for Caputo derivative.
+    
+    PDE: D_t^alpha u - u_xx = f(x,t)
+    f(x,t) = [Gamma(alpha+1) + pi^2 * t^alpha] * sin(pi*x)
     """
-    if n == 0:
-        return torch.zeros_like(u_history[0])
-
-    gamma_factor = 1.0 / torch.exp(torch.lgamma(torch.tensor(2 - alpha, device=t.device)))
-
-    result = torch.zeros_like(u_history[0])
-
-    for k in range(n):
-        tau_k = t[k + 1] - t[k]
-        a_nk = gamma_factor * (
-            (t[n] - t[k]) ** (1 - alpha) - (t[n] - t[k + 1]) ** (1 - alpha)
-        ) / tau_k
-        result = result + a_nk * (u_history[k + 1] - u_history[k])
-
-    return result
-
-
-def fractional_derivative_autodiff(
-    model: torch.nn.Module,
-    t: torch.Tensor,
-    x: torch.Tensor,
-    alpha: float,
-    t_mesh: torch.Tensor,
-) -> torch.Tensor:
-    """
-    Compute fractional derivative using automatic differentiation and L1 scheme.
-
-    This combines neural network evaluation with the L1 discretization.
-
-    Args:
-        model: PINN model
-        t: Current time points, shape (N,)
-        x: Spatial points, shape (N,)
-        alpha: Fractional order
-        t_mesh: Full time mesh for L1 scheme
-
-    Returns:
-        Fractional derivative approximation
-    """
-    # Find nearest mesh index for each t
-    # This is a simplified version - in practice, interpolation may be needed
-    device = t.device
-
-    # Evaluate model at all required points
-    u = model(t, x)
-
-    # For PINN, we often use the continuous formulation
-    # and enforce the fractional PDE in a weak sense
-    return u  # Placeholder - actual implementation depends on specific scheme
-
-
-def compute_residual(
-    model: torch.nn.Module,
-    t: torch.Tensor,
-    x: torch.Tensor,
-    alpha: float,
-    source_fn: Callable = None,
-) -> torch.Tensor:
-    """
-    Compute PDE residual for the fractional diffusion equation.
-
-    Equation: D_t^alpha u - u_xx = f(t, x)
-
-    For PINN, we use automatic differentiation for spatial derivatives
-    and approximate the fractional time derivative.
-
-    Args:
-        model: PINN model
-        t: Time collocation points
-        x: Spatial collocation points
-        alpha: Fractional order
-        source_fn: Source term function f(t, x)
-
-    Returns:
-        PDE residual at collocation points
-    """
-    t = t.requires_grad_(True)
-    x = x.requires_grad_(True)
-
-    # Forward pass
-    u = model(t, x)
-
-    # Compute spatial derivatives using autodiff
-    u_x = torch.autograd.grad(
-        u, x, grad_outputs=torch.ones_like(u), create_graph=True
-    )[0]
-
-    u_xx = torch.autograd.grad(
-        u_x, x, grad_outputs=torch.ones_like(u_x), create_graph=True
-    )[0]
-
-    # Compute time derivative (standard, for comparison or modified loss)
-    u_t = torch.autograd.grad(
-        u, t, grad_outputs=torch.ones_like(u), create_graph=True
-    )[0]
-
-    # For fractional derivative, we use a modified approach:
-    # Scale the standard derivative by t^(1-alpha) factor
-    # This is an approximation that captures the fractional behavior
-    eps = 1e-8
-    fractional_factor = (t + eps) ** (1 - alpha) / torch.exp(
-        torch.lgamma(torch.tensor(2 - alpha, device=t.device))
-    )
-    fractional_deriv = fractional_factor * u_t
-
-    # Source term
-    if source_fn is not None:
-        f = source_fn(t, x)
-    else:
-        f = torch.zeros_like(u)
-
-    # Residual: D_t^alpha u - u_xx - f = 0
-    residual = fractional_deriv - u_xx - f
-
-    return residual
+    
+    def __init__(self, model, mesh, l1_coeffs, alpha: float, device: str = "cpu"):
+        self.model = model
+        self.mesh = mesh
+        self.l1_coeffs = l1_coeffs
+        self.alpha = alpha
+        self.device = device
+        self.gamma_alpha_plus_1 = gamma(alpha + 1)
+        
+    def source_term(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+        """f(x,t) = [Gamma(alpha+1) + pi^2 * t^alpha] * sin(pi*x)"""
+        return (self.gamma_alpha_plus_1 + np.pi**2 * t**self.alpha) * torch.sin(np.pi * x)
+    
+    def compute_u_and_u_xx(self, x: torch.Tensor, t: torch.Tensor):
+        """Compute u and u_xx using autodiff."""
+        x = x.clone().requires_grad_(True)
+        t = t.clone().requires_grad_(True)
+        
+        u = self.model(x, t)
+        
+        u_x = torch.autograd.grad(
+            outputs=u, inputs=x,
+            grad_outputs=torch.ones_like(u),
+            create_graph=True, retain_graph=True
+        )[0]
+        
+        u_xx = torch.autograd.grad(
+            outputs=u_x, inputs=x,
+            grad_outputs=torch.ones_like(u_x),
+            create_graph=True, retain_graph=True
+        )[0]
+        
+        return u, u_xx
+    
+    def compute_fractional_derivative_l1(self, x: torch.Tensor, n_indices: torch.Tensor, u_current: torch.Tensor):
+        """
+        Compute L1 approximation of Caputo derivative using full history.
+        
+        L1 scheme: D_t^alpha u(t_n) = sum_{k=1}^{n} d_{n,k} * (u^{n-k+1} - u^{n-k})
+        
+        Rearranged: D_t^alpha u(t_n) = d_{n,1}*u^n - d_{n,n}*u^0 - sum_{k=1}^{n-1}(d_{n,k}-d_{n,k+1})*u^{n-k}
+        """
+        batch_size = x.shape[0]
+        result = torch.zeros(batch_size, dtype=torch.float64, device=self.device)
+        
+        unique_n = torch.unique(n_indices)
+        t_nodes = self.mesh.get_nodes()
+        
+        for n in unique_n:
+            n_val = n.item()
+            if n_val == 0:
+                continue
+                
+            mask = (n_indices == n_val)
+            x_n = x[mask]
+            u_n = u_current[mask].squeeze()
+            num_points = x_n.shape[0]
+            
+            if num_points == 0:
+                continue
+                
+            coeffs = self.l1_coeffs.get_coefficients_for_n(n_val)
+            
+            # d_{n,1} * u^n (current value - has gradient)
+            frac_deriv = coeffs[1] * u_n
+            
+            # - d_{n,n} * u^0 (initial value)
+            t_0 = t_nodes[0].expand(num_points)
+            with torch.no_grad():
+                u_0 = self.model(x_n, t_0).squeeze()
+            frac_deriv = frac_deriv - coeffs[n_val] * u_0
+            
+            # - sum_{k=1}^{n-1} (d_{n,k} - d_{n,k+1}) * u^{n-k}
+            for k in range(1, n_val):
+                idx = n_val - k
+                t_idx = t_nodes[idx].expand(num_points)
+                with torch.no_grad():
+                    u_idx = self.model(x_n, t_idx).squeeze()
+                diff_coeff = coeffs[k] - coeffs[k + 1]
+                frac_deriv = frac_deriv - diff_coeff * u_idx
+            
+            result[mask] = frac_deriv
+            
+        return result
+    
+    def compute(self, x: torch.Tensor, t: torch.Tensor, n_indices: torch.Tensor):
+        """Compute full PDE residual."""
+        u, u_xx = self.compute_u_and_u_xx(x, t)
+        frac_deriv = self.compute_fractional_derivative_l1(x, n_indices, u)
+        f = self.source_term(x.detach(), t.detach())
+        
+        residual = frac_deriv - u_xx.squeeze() - f
+        return residual
