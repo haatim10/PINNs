@@ -1,131 +1,88 @@
-"""Collocation points and data generation."""
+"""Dataset Module: Training Data Generation"""
 
 import torch
-import numpy as np
-from typing import Dict, Callable, Optional, Tuple
+from dataclasses import dataclass
+
+
+@dataclass
+class TrainingData:
+    x_coll: torch.Tensor
+    t_coll: torch.Tensor
+    n_coll: torch.Tensor
+    x_bc: torch.Tensor
+    t_bc: torch.Tensor
+    u_bc: torch.Tensor
+    x_ic: torch.Tensor
+    t_ic: torch.Tensor
+    u_ic: torch.Tensor
 
 
 class CollocationDataset:
-    """Generate collocation points for PINN training."""
-
-    def __init__(
-        self,
-        t_range: Tuple[float, float] = (0.0, 1.0),
-        x_range: Tuple[float, float] = (0.0, 1.0),
-        N_pde: int = 5000,
-        N_ic: int = 200,
-        N_bc: int = 200,
-        ic_fn: Optional[Callable] = None,
-        bc_fn: Optional[Callable] = None,
-        device: str = "cpu",
-        seed: int = 42,
-    ):
-        """
-        Initialize collocation dataset.
-
-        Args:
-            t_range: Time domain (t_min, t_max)
-            x_range: Spatial domain (x_min, x_max)
-            N_pde: Number of interior collocation points
-            N_ic: Number of initial condition points
-            N_bc: Number of boundary condition points (per boundary)
-            ic_fn: Initial condition function u(0, x)
-            bc_fn: Boundary condition function u(t, x_boundary)
-            device: Computation device
-            seed: Random seed
-        """
-        self.t_range = t_range
-        self.x_range = x_range
-        self.N_pde = N_pde
-        self.N_ic = N_ic
-        self.N_bc = N_bc
+    def __init__(self, mesh, N_x: int, N_collocation: int, N_boundary: int, 
+                 N_initial: int, x_min: float = 0.0, x_max: float = 1.0,
+                 device: str = "cpu", seed: int = None):
+        
+        self.mesh = mesh
+        self.N_x = N_x
+        self.N_t = mesh.N
+        self.N_collocation = N_collocation
+        self.N_boundary = N_boundary
+        self.N_initial = N_initial
+        self.x_min = x_min
+        self.x_max = x_max
         self.device = device
-
-        # Set default IC/BC if not provided
-        self.ic_fn = ic_fn if ic_fn is not None else lambda x: torch.sin(np.pi * x)
-        self.bc_fn = bc_fn if bc_fn is not None else lambda t, x: torch.zeros_like(t)
-
-        # Set random seed
-        torch.manual_seed(seed)
-        np.random.seed(seed)
-
-        # Generate points
-        self._generate_points()
-
-    def _generate_points(self):
-        """Generate all collocation points."""
-        t_min, t_max = self.t_range
-        x_min, x_max = self.x_range
-
-        # Interior PDE points (Latin Hypercube or random sampling)
-        self.t_pde = torch.rand(self.N_pde, 1, device=self.device) * (t_max - t_min) + t_min
-        self.x_pde = torch.rand(self.N_pde, 1, device=self.device) * (x_max - x_min) + x_min
-
-        # Avoid t=0 for interior points (singularity)
-        self.t_pde = torch.clamp(self.t_pde, min=1e-6)
-
-        # Initial condition points (t=0)
-        self.x_ic = torch.rand(self.N_ic, 1, device=self.device) * (x_max - x_min) + x_min
-        self.u_ic = self.ic_fn(self.x_ic)
-
-        # Boundary condition points
-        self.t_bc = torch.rand(self.N_bc, 1, device=self.device) * (t_max - t_min) + t_min
-        self.x_bc_left = torch.full((self.N_bc, 1), x_min, device=self.device)
-        self.x_bc_right = torch.full((self.N_bc, 1), x_max, device=self.device)
-        self.u_bc_left = self.bc_fn(self.t_bc, self.x_bc_left)
-        self.u_bc_right = self.bc_fn(self.t_bc, self.x_bc_right)
-
-    def get_batch(self) -> Dict[str, torch.Tensor]:
-        """Get all collocation data as a dictionary."""
-        return {
-            "t_pde": self.t_pde,
-            "x_pde": self.x_pde,
-            "x_ic": self.x_ic,
-            "u_ic": self.u_ic,
-            "t_bc": self.t_bc,
-            "x_bc_left": self.x_bc_left,
-            "x_bc_right": self.x_bc_right,
-            "u_bc_left": self.u_bc_left,
-            "u_bc_right": self.u_bc_right,
-        }
-
-    def resample_pde_points(self):
-        """Resample interior PDE points (for adaptive training)."""
-        t_min, t_max = self.t_range
-        x_min, x_max = self.x_range
-
-        self.t_pde = torch.rand(self.N_pde, 1, device=self.device) * (t_max - t_min) + t_min
-        self.x_pde = torch.rand(self.N_pde, 1, device=self.device) * (x_max - x_min) + x_min
-        self.t_pde = torch.clamp(self.t_pde, min=1e-6)
-
-
-def create_test_grid(
-    t_range: Tuple[float, float],
-    x_range: Tuple[float, float],
-    N_t: int = 100,
-    N_x: int = 100,
-    device: str = "cpu",
-) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-    """
-    Create a regular grid for testing/visualization.
-
-    Args:
-        t_range: Time domain
-        x_range: Spatial domain
-        N_t: Number of time points
-        N_x: Number of spatial points
-        device: Computation device
-
-    Returns:
-        t_grid, x_grid: Flattened grid points for model evaluation
-        T, X: Meshgrid arrays for plotting
-    """
-    t = torch.linspace(t_range[0], t_range[1], N_t, device=device)
-    x = torch.linspace(x_range[0], x_range[1], N_x, device=device)
-
-    T, X = torch.meshgrid(t, x, indexing="ij")
-
-    t_grid = T.flatten().unsqueeze(-1)
-    x_grid = X.flatten().unsqueeze(-1)
-
-    return t_grid, x_grid, T, X
+        
+        if seed is not None:
+            torch.manual_seed(seed)
+            
+        self.x_grid = torch.linspace(x_min, x_max, N_x, dtype=torch.float64, device=device)
+        self.t_grid = mesh.get_nodes()
+        
+        x_interior = self.x_grid[1:-1]
+        t_interior = self.t_grid[1:]
+        
+        X, T = torch.meshgrid(x_interior, t_interior, indexing='ij')
+        n_values = torch.arange(1, self.N_t + 1, device=device)
+        N_grid = n_values.unsqueeze(0).expand(len(x_interior), -1)
+        
+        self.x_interior_flat = X.flatten()
+        self.t_interior_flat = T.flatten()
+        self.n_interior_flat = N_grid.flatten()
+        self.total_interior_points = len(self.x_interior_flat)
+        
+    def sample_collocation_points(self):
+        indices = torch.randperm(self.total_interior_points, device=self.device)[:self.N_collocation]
+        return (self.x_interior_flat[indices], 
+                self.t_interior_flat[indices], 
+                self.n_interior_flat[indices])
+    
+    def get_boundary_points(self):
+        t_indices = torch.randint(1, self.N_t + 1, (self.N_boundary,), device=self.device)
+        t = self.t_grid[t_indices]
+        
+        x_left = torch.zeros(self.N_boundary, dtype=torch.float64, device=self.device)
+        x_right = torch.ones(self.N_boundary, dtype=torch.float64, device=self.device)
+        
+        x = torch.cat([x_left, x_right])
+        t = torch.cat([t, t])
+        u = torch.zeros_like(x)
+        
+        return x, t, u
+    
+    def get_initial_points(self):
+        x_indices = torch.randint(0, self.N_x, (self.N_initial,), device=self.device)
+        x = self.x_grid[x_indices]
+        t = torch.zeros(self.N_initial, dtype=torch.float64, device=self.device)
+        u = torch.zeros_like(x)
+        return x, t, u
+    
+    def get_training_data(self, resample_collocation: bool = True):
+        x_coll, t_coll, n_coll = self.sample_collocation_points()
+        x_bc, t_bc, u_bc = self.get_boundary_points()
+        x_ic, t_ic, u_ic = self.get_initial_points()
+        
+        return TrainingData(
+            x_coll=x_coll, t_coll=t_coll, n_coll=n_coll,
+            x_bc=x_bc, t_bc=t_bc, u_bc=u_bc,
+            x_ic=x_ic, t_ic=t_ic, u_ic=u_ic
+        )
