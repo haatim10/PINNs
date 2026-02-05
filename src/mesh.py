@@ -6,6 +6,11 @@ from scipy.special import gamma
 
 
 class GradedMesh:
+    """
+    Graded temporal mesh: t_n = (n/N)^beta for n = 0, 1, ..., N
+    beta > 1 gives finer mesh near t=0 to handle singularity
+    """
+    
     def __init__(self, N: int, beta: float, t_max: float = 1.0, device: str = "cpu"):
         self.N = N
         self.beta = beta
@@ -21,6 +26,12 @@ class GradedMesh:
 
 
 class L1Coefficients:
+    """
+    L1 discretization coefficients for Caputo fractional derivative.
+    
+    d_{n,k}^(alpha) = [(t_n - t_{n-k})^{1-alpha} - (t_n - t_{n-k+1})^{1-alpha}] / [Gamma(2-alpha) * tau_{n-k+1}]
+    """
+    
     def __init__(self, mesh: GradedMesh, alpha: float, device: str = "cpu"):
         self.mesh = mesh
         self.alpha = alpha

@@ -1,6 +1,9 @@
 """
-Physics Module: Fractional Derivative and PDE Residual
-Full L1 Scheme Implementation from the Paper
+Physics Module: Full L1 Scheme for Caputo Fractional Derivative
+
+PDE: D_t^alpha u - u_xx = f(x,t)
+f(x,t) = [Gamma(alpha+1) + pi^2 * t^alpha] * sin(pi*x)
+Exact solution: u(x,t) = t^alpha * sin(pi*x)
 """
 
 import torch
@@ -10,10 +13,9 @@ from scipy.special import gamma
 
 class PDEResidual:
     """
-    Computes PDE residual using the full L1 scheme for Caputo derivative.
+    Computes PDE residual using full L1 scheme from the paper.
     
-    PDE: D_t^alpha u - u_xx = f(x,t)
-    f(x,t) = [Gamma(alpha+1) + pi^2 * t^alpha] * sin(pi*x)
+    L1 scheme: D_t^alpha u(t_n) = d_{n,1}*u^n - d_{n,n}*u^0 - sum_{k=1}^{n-1}(d_{n,k}-d_{n,k+1})*u^{n-k}
     """
     
     def __init__(self, model, mesh, l1_coeffs, alpha: float, device: str = "cpu"):
@@ -29,7 +31,7 @@ class PDEResidual:
         return (self.gamma_alpha_plus_1 + np.pi**2 * t**self.alpha) * torch.sin(np.pi * x)
     
     def compute_u_and_u_xx(self, x: torch.Tensor, t: torch.Tensor):
-        """Compute u and u_xx using autodiff."""
+        """Compute u and u_xx using automatic differentiation."""
         x = x.clone().requires_grad_(True)
         t = t.clone().requires_grad_(True)
         
@@ -53,9 +55,7 @@ class PDEResidual:
         """
         Compute L1 approximation of Caputo derivative using full history.
         
-        L1 scheme: D_t^alpha u(t_n) = sum_{k=1}^{n} d_{n,k} * (u^{n-k+1} - u^{n-k})
-        
-        Rearranged: D_t^alpha u(t_n) = d_{n,1}*u^n - d_{n,n}*u^0 - sum_{k=1}^{n-1}(d_{n,k}-d_{n,k+1})*u^{n-k}
+        L1 formula: D_t^alpha u(t_n) = d_{n,1}*u^n - d_{n,n}*u^0 - sum_{k=1}^{n-1}(d_{n,k}-d_{n,k+1})*u^{n-k}
         """
         batch_size = x.shape[0]
         result = torch.zeros(batch_size, dtype=torch.float64, device=self.device)
@@ -101,7 +101,7 @@ class PDEResidual:
         return result
     
     def compute(self, x: torch.Tensor, t: torch.Tensor, n_indices: torch.Tensor):
-        """Compute full PDE residual."""
+        """Compute full PDE residual: D_t^alpha u - u_xx - f = 0"""
         u, u_xx = self.compute_u_and_u_xx(x, t)
         frac_deriv = self.compute_fractional_derivative_l1(x, n_indices, u)
         f = self.source_term(x.detach(), t.detach())
