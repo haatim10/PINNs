@@ -20,6 +20,7 @@ from tqdm import tqdm
 import time
 import math
 import csv
+import os
 
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -27,6 +28,95 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.model import PINN
 from src.mesh import GradedMesh, L1Coefficients
 from src.physics_integro import IntegroDifferentialResidual, BoundaryConditions, InitialCondition
+
+
+def log_l1_discretization_points(epoch, data, mesh, l1_coeffs, l1_file, alpha):
+    """
+    Log the exact points used in L1 discretization formula for the Caputo derivative.
+    
+    For each collocation point (x, t_n) with time index n, the L1 scheme uses:
+    - Current time t_n (where we compute D_t^α u)
+    - History times t_0, t_1, ..., t_{n-1} for approximating the integral
+    
+    L1 Formula:
+    D_t^α u(x, t_n) ≈ d_{n,1}·u^n - d_{n,n}·u^0 - Σ_{k=1}^{n-1} (d_{n,k} - d_{n,k+1})·u^{n-k}
+    
+    Where d_{n,k} = [(t_n - t_{n-k})^{1-α} - (t_n - t_{n-k+1})^{1-α}] / [Γ(2-α)·τ_{n-k+1}]
+    """
+    t_nodes = mesh.get_nodes().cpu().numpy()
+    n_indices = data['n_coll'].cpu().numpy()
+    x_coll = data['x_coll'].cpu().numpy()
+    t_coll = data['t_coll'].cpu().numpy()
+    
+    with open(l1_file, 'a') as f:
+        f.write(f"\n{'='*80}\n")
+        f.write(f"EPOCH {epoch}: L1 DISCRETIZATION POINTS\n")
+        f.write(f"{'='*80}\n\n")
+        
+        # Get unique n values in this batch
+        unique_n = np.unique(n_indices)
+        
+        f.write(f"Total collocation points: {len(x_coll)}\n")
+        f.write(f"Unique time indices n in batch: {[int(n) for n in sorted(unique_n)]}\n")
+        f.write(f"Graded mesh parameters: N={mesh.N}, β={mesh.beta}, T={mesh.t_max}\n\n")
+        
+        # Log graded mesh nodes
+        f.write("GRADED TEMPORAL MESH (t_n = T·(n/N)^β):\n")
+        f.write("-" * 60 + "\n")
+        for i, t in enumerate(t_nodes):
+            f.write(f"  t_{i} = {t:.8f}\n")
+        f.write("\n")
+        
+        # For each unique n, show the L1 formula details
+        for n in sorted(unique_n):
+            if n == 0:
+                continue
+                
+            n = int(n)
+            mask = n_indices == n
+            count = np.sum(mask)
+            
+            f.write(f"\n{'─'*60}\n")
+            f.write(f"TIME INDEX n = {n} ({count} collocation points at this time level)\n")
+            f.write(f"{'─'*60}\n")
+            f.write(f"Target time: t_{n} = {t_nodes[n]:.8f}\n\n")
+            
+            # Get L1 coefficients
+            coeffs = l1_coeffs.get_coefficients_for_n(n).cpu().numpy()
+            
+            f.write("L1 SCHEME FORMULA:\n")
+            f.write(f"D_t^{alpha} u(x, t_{n}) ≈ d_{{n,1}}·u^{n} - d_{{n,n}}·u^0")
+            if n > 1:
+                f.write(f" - Σ_{{k=1}}^{{{n-1}}} (d_{{n,k}} - d_{{n,k+1}})·u^{{{n}-k}}")
+            f.write("\n\n")
+            
+            f.write("HISTORY POINTS USED:\n")
+            f.write(f"{'k':<5} {'Time Index':<15} {'t_value':<15} {'Coefficient':<20} {'Role'}\n")
+            f.write("-" * 70 + "\n")
+            
+            # Current point (k=1 term: d_{n,1} * u^n)
+            f.write(f"{'1':<5} {'n=' + str(n):<15} {t_nodes[n]:<15.8f} {'d_{n,1}=' + f'{coeffs[1]:.8f}':<20} Current u^n\n")
+            
+            # Initial point (d_{n,n} * u^0)
+            f.write(f"{n:<5} {'n=0':<15} {t_nodes[0]:<15.8f} {'d_{n,n}=' + f'{coeffs[n]:.8f}':<20} Initial u^0\n")
+            
+            # History terms
+            for k in range(1, n):
+                idx = n - k
+                diff_coeff = coeffs[k] - coeffs[k + 1]
+                f.write(f"{k:<5} {'n=' + str(idx):<15} {t_nodes[idx]:<15.8f} "
+                       f"{'(d-d)=' + f'{diff_coeff:.8f}':<20} History u^{idx}\n")
+            
+            f.write("\n")
+            
+            # Sample collocation points at this n
+            x_at_n = x_coll[mask][:5]  # First 5 points
+            t_at_n = t_coll[mask][:5]
+            f.write(f"Sample collocation points (x, t) at n={n}:\n")
+            for i, (x, t) in enumerate(zip(x_at_n, t_at_n)):
+                f.write(f"  Point {i+1}: x={x:.6f}, t={t:.8f}\n")
+        
+        f.write(f"\n{'='*80}\n")
 
 
 class IntegroDiffDataset:
@@ -249,13 +339,30 @@ def train(config_path, resume=False):
     checkpoint_interval = log_cfg.get('checkpoint_interval', 1000)
     track_points = log_cfg.get('track_points', False)
     points_file = log_cfg.get('points_file', 'outputs/integro_diff_points.csv')
+    track_l1_points = log_cfg.get('track_l1_points', False)
+    l1_points_file = log_cfg.get('l1_points_file', 'outputs/l1_discretization_points.csv')
     
     # Point tracking
     if track_points:
         with open(points_file, 'w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow(['epoch', 'point_idx', 'x', 't', 'n'])
-        print(f"Point tracking enabled: {points_file}")
+        print(f"Collocation point tracking enabled: {points_file}")
+    
+    # L1 discretization point tracking
+    if track_l1_points:
+        with open(l1_points_file, 'w') as f:
+            f.write("L1 DISCRETIZATION SCHEME - POINT TRACKING LOG\n")
+            f.write("=" * 80 + "\n\n")
+            f.write("This file logs the exact temporal points used in the L1 scheme\n")
+            f.write("for approximating the Caputo fractional derivative D_t^α u.\n\n")
+            f.write(f"Problem Parameters:\n")
+            f.write(f"  - Fractional order α = {alpha}\n")
+            f.write(f"  - Integral singularity β = {beta}\n")
+            f.write(f"  - Spatial points N_x = {N_x}\n")
+            f.write(f"  - Temporal points N_t = {N_t}\n")
+            f.write(f"  - Mesh grading β_mesh = {prob.get('mesh_grading', 2.0)}\n\n")
+        print(f"L1 discretization point tracking enabled: {l1_points_file}")
     
     # Training history
     history = {'loss': [], 'l2': [], 'linf': [], 'epochs': []}
@@ -298,7 +405,7 @@ def train(config_path, resume=False):
         if scheduler:
             scheduler.step()
         
-        # Track points
+        # Track collocation points
         if track_points and (epoch == 1 or epoch % 1000 == 0):
             with open(points_file, 'a', newline='') as f:
                 writer = csv.writer(f)
@@ -307,6 +414,10 @@ def train(config_path, resume=False):
                                      data['x_coll'][i].item(), 
                                      data['t_coll'][i].item(),
                                      data['n_coll'][i].item()])
+        
+        # Track L1 discretization points
+        if track_l1_points and (epoch == 1 or epoch % 1000 == 0):
+            log_l1_discretization_points(epoch, data, mesh, l1_coeffs, l1_points_file, alpha)
         
         # Evaluation
         if epoch % eval_interval == 0 or epoch == 1:

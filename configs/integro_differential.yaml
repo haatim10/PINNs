@@ -14,13 +14,14 @@ problem:
   x_min: 0.0
   x_max: 1.0
   t_max: 1.0
+  mesh_grading: 2.0   # β for graded mesh: t_n = (n/N)^β
 
 discretization:
-  N_x: 200            # Spatial grid points
+  N_x: 100            # Spatial grid points
   N_t: 100            # Temporal grid points
-  N_collocation: 150  # Collocation points per batch
-  N_boundary: 75      # Boundary points per batch
-  N_initial: 75       # Initial condition points per batch
+  N_collocation: 100  # Collocation points per batch
+  N_boundary: 50      # Boundary points per batch
+  N_initial: 50       # Initial condition points per batch
   N_integral_quad: 20 # Quadrature points for integral approximation
 
 network:
@@ -38,8 +39,8 @@ training:
     warmup_epochs: 500
     min_lr: 0.00001
   lbfgs:
-    enabled: true
-    epochs: 500
+    enabled: false    # Disabled - using Adam only
+    epochs: 0
     lr: 1.0
     max_iter: 20
     history_size: 50
@@ -47,13 +48,14 @@ training:
     pde: 1.0
     bc: 20.0
     ic: 20.0
-    integral: 1.0     # Weight for integral term accuracy
 
 logging:
   eval_interval: 500
   checkpoint_interval: 1000
   track_points: true
   points_file: outputs/integro_diff_points.csv
+  track_l1_points: true
+  l1_points_file: outputs/l1_discretization_points.csv
 
 paths:
   checkpoint_dir: outputs/checkpoints_integro_diff
