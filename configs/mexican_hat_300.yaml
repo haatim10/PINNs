@@ -1,0 +1,53 @@
+# PI-fMI Configuration - Mexican Hat Wavelet Activation
+# 300x300 grid, 250 collocation points, 15k epochs
+
+problem:
+  alpha: 0.5
+  beta: 2.0
+  x_min: 0.0
+  x_max: 1.0
+  t_max: 1.0
+
+discretization:
+  N_x: 200
+  N_t: 100
+  N_collocation: 150
+  N_boundary: 75
+  N_initial: 75
+
+network:
+  input_dim: 2
+  output_dim: 1
+  hidden_layers: [64, 64, 64, 64]
+  activation: mexican_hat
+
+training:
+  epochs: 10000
+  learning_rate: 0.001
+  scheduler:
+    enabled: true
+    type: cosine_warmup
+    warmup_epochs: 500
+    min_lr: 0.00001
+  lbfgs:
+    enabled: true
+    epochs: 500
+    lr: 1.0
+    max_iter: 20
+    history_size: 50
+  weights:
+    pde: 1.0
+    bc: 20.0
+    ic: 20.0
+
+logging:
+  eval_interval: 500
+  checkpoint_interval: 1000
+  track_points: true
+  points_file: outputs/sampled_points_log.csv
+
+paths:
+  checkpoint_dir: outputs/checkpoints_mexican_hat
+
+device: cuda
+seed: 42

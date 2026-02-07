@@ -5,6 +5,21 @@ import torch.nn as nn
 from typing import List
 
 
+class MexicanHatWavelet(nn.Module):
+    """
+    Mexican Hat (Ricker) wavelet activation function.
+    ψ(x) = (1 - x²) * exp(-x²/2)
+    
+    Also known as the second derivative of a Gaussian.
+    Good for capturing oscillatory behavior in PDE solutions.
+    """
+    def __init__(self):
+        super(MexicanHatWavelet, self).__init__()
+    
+    def forward(self, x):
+        return (1 - x**2) * torch.exp(-x**2 / 2)
+
+
 class PINN(nn.Module):
     """
     Fully connected neural network for approximating PDE solutions.
@@ -31,6 +46,7 @@ class PINN(nn.Module):
             "relu": nn.ReLU(),
             "gelu": nn.GELU(),
             "silu": nn.SiLU(),
+            "mexican_hat": MexicanHatWavelet(),
         }
         self.activation = activations.get(activation.lower(), nn.Tanh())
         
