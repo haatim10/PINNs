@@ -39,6 +39,8 @@ $$D_t^{\alpha} u(x,t) - (x^2 + 1)\frac{\partial^2 u}{\partial x^2} + \int_0^t \s
 
 **Exact Solution:** $u(x,t) = t^{\alpha}\cos(\pi x)$
 
+> **Note on solution shape:** The solution is symmetric about $x = 0.5$ because $\cos(\pi x)$ over $[0,1]$ spans half a period: positive at $x=0$, zero at $x=0.5$, negative at $x=1$. This "mirror image" appearance is the natural shape of the cosine function, not a code artifact.
+
 ### Key Challenges
 1. **Fractional derivative** requires full time history (non-local operator)
 2. **Variable coefficient** $(x^2+1)$ in diffusion term
@@ -217,6 +219,110 @@ where $t_{mid} = (t_j + t_{j+1})/2$ and $h_j = t_{j+1} - t_j$.
 
 ---
 
+## Implementation Details
+
+This section provides concrete code walkthroughs to demonstrate how the mathematical concepts are actually implemented.
+
+### How Collocation Points Are Selected
+
+The code builds and samples from a structured grid. Here's the exact process:
+
+**Step 1: Create spatial and temporal grids**
+```python
+# Spatial: uniform grid on [0, 1]
+self.x_grid = torch.linspace(0, 1, N_x)   # e.g., [0, 0.02, 0.04, ..., 1.0] for N_x=50
+
+# Temporal: graded mesh t_n = (n/N)^β
+self.t_grid = mesh.get_nodes()            # e.g., [0, 0.0004, 0.0016, ..., 1.0] for N_t=50, β=2
+```
+
+**Step 2: Build interior meshgrid (exclude boundaries)**
+```python
+x_interior = self.x_grid[1:-1]    # Skip x=0 and x=1 (boundary conditions)
+t_interior = self.t_grid[1:]       # Skip t=0 (initial condition)
+
+X, T = torch.meshgrid(x_interior, t_interior, indexing='ij')
+n_values = torch.arange(1, N_t + 1)   # Time indices [1, 2, ..., N_t]
+
+# Flatten to get all interior grid points
+self.x_interior = X.flatten()      # Shape: (48 × 50) = 2400 points
+self.t_interior = T.flatten()
+self.n_interior = N_grid.flatten()  # Corresponding time index for each point
+```
+
+**Step 3: Random sampling each epoch**
+```python
+def sample_collocation(self):
+    idx = torch.randperm(self.total_interior)[:self.N_collocation]  # Random permutation
+    return self.x_interior[idx], self.t_interior[idx], self.n_interior[idx]
+```
+
+**Proof from logged data (`outputs/integro_diff_points.csv`):**
+```
+epoch,point_idx,x,t,n
+1,0,0.7755,0.0196,7      ← x from spatial grid, t = (7/50)² = 0.0196 ✓
+1,1,0.1633,0.2500,25     ← t = (25/50)² = 0.25 ✓
+1,2,0.8980,0.0016,2      ← t = (2/50)² = 0.0016 ✓
+1000,0,0.5306,0.3136,28  ← Different random sample at epoch 1000
+```
+
+**Key insight:** The integer `n` (time index) is crucial because:
+1. It determines which L1 coefficients $d_{n,k}$ to use
+2. It tells us how many history terms to sum (k = 1 to n-1)
+
+### How the Integral Term Is Computed
+
+For a collocation point at time level $n$, we compute:
+$$\int_0^{t_n} \sin(x)(t_n-s)^{-\beta} u(x,s)\, ds$$
+
+**Implementation in `src/physics_integro.py`:**
+
+```python
+def compute_integral_term(self, x, t, n_indices):
+    """
+    Compute weakly singular integral: ∫₀ᵗ sin(x)(t-s)^{-β} u(x,s) ds
+    Uses composite midpoint rule on graded mesh.
+    """
+    for n in unique_n:
+        n_val = n.item()
+        mask = (n_indices == n_val)
+        x_n = x[mask]           # All x-coordinates at this time level
+        t_n = t_nodes[n_val]    # The target time t_n
+        
+        sin_x = torch.sin(x_n)  # Factor out sin(x)
+        
+        # Sum over all mesh intervals [t_j, t_{j+1}] for j = 0, ..., n-1
+        integral_sum = torch.zeros(num_points)
+        
+        for j in range(n_val):
+            t_j = t_nodes[j]
+            t_j_plus_1 = t_nodes[j + 1]
+            h_j = t_j_plus_1 - t_j                    # Interval width
+            t_mid = (t_j + t_j_plus_1) / 2            # Midpoint
+            
+            # Kernel: (t_n - t_mid)^{-β}
+            kernel = (t_n - t_mid) ** (-self.beta)
+            
+            # Evaluate neural network at midpoint (no gradient needed for history)
+            with torch.no_grad():
+                u_mid = self.model(x_n, t_mid)
+            
+            # Accumulate: kernel × u × width
+            integral_sum += kernel * u_mid * h_j
+        
+        result[mask] = sin_x * integral_sum
+    
+    return result
+```
+
+**Why `torch.no_grad()` for history terms?**
+
+Only the current solution $u(x, t_n)$ needs gradients for backpropagation. History values $u(x, s)$ for $s < t_n$ are treated as fixed during each training step—this is the standard approach for time-stepping schemes in PINNs.
+
+**Computational cost:** For a point at time level $n$, we make $n$ forward passes through the network (one per quadrature point). With $N_t = 50$ and 50 collocation points, this means ~1250 forward passes per training iteration, explaining the ~1 second/iteration runtime.
+
+---
+
 ## Neural Network Architecture
 
 ### Mexican Hat Wavelet Activation
@@ -278,15 +384,37 @@ $$\mathcal{L}_{IC} = \frac{1}{N_{IC}} \sum |u(x,0)|^2$$
 
 ## Results
 
+### Final Accuracy
+
 | Metric | Value |
 |--------|-------|
-| **Spatial points** | 100 |
-| **Temporal points** | 100 |
-| **Collocation points** | 100 |
-| **Epochs** | 10,000 |
-| **α (fractional order)** | 0.5 |
-| **β (integral singularity)** | 0.5 |
-| **Mesh grading** | 2.0 |
+| **L2 Relative Error** | **0.54%** |
+| **L∞ Error** | 4.84% |
+| **Training Time** | ~2 hours |
+
+### Configuration
+
+| Parameter | Value |
+|-----------|-------|
+| Spatial points ($N_x$) | 50 |
+| Temporal points ($N_t$) | 50 |
+| Collocation points | 50 |
+| Epochs | 10,000 |
+| α (fractional order) | 0.5 |
+| β (integral singularity) | 0.5 |
+| Mesh grading ($\beta_{mesh}$) | 2.0 |
+
+### Output Plots
+
+All plots saved to `outputs/integro_diff_results/`:
+- `solution_comparison.png` - Exact vs Predicted heatmaps + error
+- `slices_fixed_t.png` - Solution slices at t = 0.1, 0.3, 0.5, 0.7, 0.9, 1.0
+- `slices_fixed_x.png` - Solution slices at x = 0.1, 0.25, 0.4, 0.6, 0.75, 0.9
+- `slices_late_time.png` - Late time slices (t = 0.90 to 0.99)
+- `slices_late_x.png` - Late spatial slices (x = 0.90 to 0.99)
+- `error_slices.png` - Error distribution at various times
+- `3d_surface_plot.png` - 3D visualization
+- `training_history.png` - Loss, L2, L∞ curves
 
 ---
 
