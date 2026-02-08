@@ -51,7 +51,7 @@ training:
 
 logging:
   eval_interval: 500
-  checkpoint_interval: 1000
+  checkpoint_interval: 500
   track_points: true
   points_file: outputs/integro_diff_points.csv
   track_l1_points: true

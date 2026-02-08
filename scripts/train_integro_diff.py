@@ -517,7 +517,174 @@ def train(config_path, resume=False):
         'final_linf': linf_err
     }, checkpoint_dir / 'final_model.pt')
     
+    # Generate plots
+    print("\nGenerating output plots...")
+    generate_plots(model, alpha, history, results_dir, device)
+    print(f"Plots saved to {results_dir}")
+    
     return model, history
+
+
+def generate_plots(model, alpha, history, results_dir, device):
+    """Generate all visualization plots."""
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d import Axes3D
+    
+    model.eval()
+    results_dir = Path(results_dir)
+    results_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Create evaluation grid
+    x = np.linspace(0, 1, 100)
+    t = np.linspace(0.01, 1, 100)
+    X, T = np.meshgrid(x, t)
+    
+    with torch.no_grad():
+        x_flat = torch.tensor(X.flatten(), dtype=torch.float64, device=device)
+        t_flat = torch.tensor(T.flatten(), dtype=torch.float64, device=device)
+        u_pred = model(x_flat, t_flat).cpu().numpy().reshape(X.shape)
+    
+    u_exact = (T ** alpha) * np.cos(np.pi * X)
+    error = np.abs(u_pred - u_exact)
+    
+    # 1. Solution Comparison (2D heatmaps)
+    fig, axes = plt.subplots(1, 3, figsize=(15, 4))
+    
+    im0 = axes[0].pcolormesh(X, T, u_exact, cmap='viridis', shading='auto')
+    axes[0].set_xlabel('x')
+    axes[0].set_ylabel('t')
+    axes[0].set_title('Exact Solution')
+    plt.colorbar(im0, ax=axes[0])
+    
+    im1 = axes[1].pcolormesh(X, T, u_pred, cmap='viridis', shading='auto')
+    axes[1].set_xlabel('x')
+    axes[1].set_ylabel('t')
+    axes[1].set_title('PINN Prediction')
+    plt.colorbar(im1, ax=axes[1])
+    
+    im2 = axes[2].pcolormesh(X, T, error, cmap='hot', shading='auto')
+    axes[2].set_xlabel('x')
+    axes[2].set_ylabel('t')
+    axes[2].set_title(f'Absolute Error (max={error.max():.4f})')
+    plt.colorbar(im2, ax=axes[2])
+    
+    plt.tight_layout()
+    plt.savefig(results_dir / 'solution_comparison.png', dpi=150)
+    plt.close()
+    
+    # 2. Slices at fixed t
+    fig, axes = plt.subplots(2, 3, figsize=(15, 8))
+    t_vals = [0.1, 0.3, 0.5, 0.7, 0.9, 1.0]
+    
+    for i, t_val in enumerate(t_vals):
+        ax = axes[i // 3, i % 3]
+        t_idx = int(t_val * 99)
+        ax.plot(x, u_exact[t_idx, :], 'b-', label='Exact', linewidth=2)
+        ax.plot(x, u_pred[t_idx, :], 'r--', label='Predicted', linewidth=2)
+        ax.set_xlabel('x')
+        ax.set_ylabel('u(x,t)')
+        ax.set_title(f't = {t_val:.1f}')
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig(results_dir / 'slices_fixed_t.png', dpi=150)
+    plt.close()
+    
+    # 3. Slices at fixed x
+    fig, axes = plt.subplots(2, 3, figsize=(15, 8))
+    x_vals = [0.1, 0.25, 0.4, 0.6, 0.75, 0.9]
+    
+    for i, x_val in enumerate(x_vals):
+        ax = axes[i // 3, i % 3]
+        x_idx = int(x_val * 99)
+        ax.plot(t, u_exact[:, x_idx], 'b-', label='Exact', linewidth=2)
+        ax.plot(t, u_pred[:, x_idx], 'r--', label='Predicted', linewidth=2)
+        ax.set_xlabel('t')
+        ax.set_ylabel('u(x,t)')
+        ax.set_title(f'x = {x_val:.2f}')
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig(results_dir / 'slices_fixed_x.png', dpi=150)
+    plt.close()
+    
+    # 4. Error slices
+    fig, axes = plt.subplots(2, 3, figsize=(15, 8))
+    
+    for i, t_val in enumerate(t_vals):
+        ax = axes[i // 3, i % 3]
+        t_idx = int(t_val * 99)
+        ax.plot(x, error[t_idx, :], 'k-', linewidth=2)
+        ax.set_xlabel('x')
+        ax.set_ylabel('|Error|')
+        ax.set_title(f'Error at t = {t_val:.1f} (max={error[t_idx, :].max():.4f})')
+        ax.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig(results_dir / 'error_slices.png', dpi=150)
+    plt.close()
+    
+    # 5. 3D Surface Plot
+    fig = plt.figure(figsize=(18, 5))
+    
+    ax1 = fig.add_subplot(131, projection='3d')
+    ax1.plot_surface(X, T, u_exact, cmap='viridis', alpha=0.9)
+    ax1.set_xlabel('x')
+    ax1.set_ylabel('t')
+    ax1.set_zlabel('u(x,t)')
+    ax1.set_title('Exact Solution')
+    ax1.view_init(elev=25, azim=45)
+    
+    ax2 = fig.add_subplot(132, projection='3d')
+    ax2.plot_surface(X, T, u_pred, cmap='viridis', alpha=0.9)
+    ax2.set_xlabel('x')
+    ax2.set_ylabel('t')
+    ax2.set_zlabel('u(x,t)')
+    ax2.set_title('PINN Prediction')
+    ax2.view_init(elev=25, azim=45)
+    
+    ax3 = fig.add_subplot(133, projection='3d')
+    ax3.plot_surface(X, T, error, cmap='hot', alpha=0.9)
+    ax3.set_xlabel('x')
+    ax3.set_ylabel('t')
+    ax3.set_zlabel('|Error|')
+    ax3.set_title(f'Absolute Error (max={error.max():.4f})')
+    ax3.view_init(elev=25, azim=45)
+    
+    plt.tight_layout()
+    plt.savefig(results_dir / '3d_surface_plot.png', dpi=150)
+    plt.close()
+    
+    # 6. Training History
+    if history['epochs']:
+        fig, axes = plt.subplots(1, 3, figsize=(15, 4))
+        
+        axes[0].semilogy(history['epochs'], history['loss'], 'b-')
+        axes[0].set_xlabel('Epoch')
+        axes[0].set_ylabel('Loss')
+        axes[0].set_title('Training Loss')
+        axes[0].grid(True, alpha=0.3)
+        
+        axes[1].semilogy(history['epochs'], history['l2'], 'g-')
+        axes[1].set_xlabel('Epoch')
+        axes[1].set_ylabel('L2 Error')
+        axes[1].set_title('L2 Relative Error')
+        axes[1].grid(True, alpha=0.3)
+        
+        axes[2].semilogy(history['epochs'], history['linf'], 'r-')
+        axes[2].set_xlabel('Epoch')
+        axes[2].set_ylabel('Linf Error')
+        axes[2].set_title('L∞ Error')
+        axes[2].grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        plt.savefig(results_dir / 'training_history.png', dpi=150)
+        plt.close()
+    
+    print(f"Generated plots: solution_comparison.png, slices_fixed_t.png, slices_fixed_x.png,")
+    print(f"                 error_slices.png, 3d_surface_plot.png, training_history.png")
 
 
 if __name__ == "__main__":
