@@ -296,7 +296,7 @@ def train(config_path, resume=False):
     print(f"Grid: {N_x}x{N_t}, Collocation points: {disc['N_collocation']}")
     
     # Create mesh and L1 coefficients
-    mesh = GradedMesh(N=N_t, T=prob['t_max'], beta=2.0, device=device)
+    mesh = GradedMesh(N=N_t, t_max=prob['t_max'], beta=2.0, device=device)
     l1_coeffs = L1Coefficients(mesh, alpha)
     
     # Create model
@@ -591,6 +591,25 @@ def generate_plots(model, alpha, history, results_dir, device):
     plt.savefig(results_dir / 'slices_fixed_t.png', dpi=150)
     plt.close()
     
+    # 2b. Late time slices (t = 0.90 to 0.99)
+    fig, axes = plt.subplots(2, 5, figsize=(20, 8))
+    t_vals_late = [0.90, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99]
+    
+    for i, t_val in enumerate(t_vals_late):
+        ax = axes[i // 5, i % 5]
+        t_idx = min(int((t_val - 0.01) / 0.99 * 99), 99)  # Map t_val to grid index
+        ax.plot(x, u_exact[t_idx, :], 'b-', label='Exact', linewidth=2)
+        ax.plot(x, u_pred[t_idx, :], 'r--', label='Predicted', linewidth=2)
+        ax.set_xlabel('x')
+        ax.set_ylabel('u(x,t)')
+        ax.set_title(f't = {t_val:.2f}')
+        ax.legend(fontsize=8)
+        ax.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig(results_dir / 'slices_late_time.png', dpi=150)
+    plt.close()
+
     # 3. Slices at fixed x
     fig, axes = plt.subplots(2, 3, figsize=(15, 8))
     x_vals = [0.1, 0.25, 0.4, 0.6, 0.75, 0.9]
@@ -683,8 +702,8 @@ def generate_plots(model, alpha, history, results_dir, device):
         plt.savefig(results_dir / 'training_history.png', dpi=150)
         plt.close()
     
-    print(f"Generated plots: solution_comparison.png, slices_fixed_t.png, slices_fixed_x.png,")
-    print(f"                 error_slices.png, 3d_surface_plot.png, training_history.png")
+    print(f"Generated plots: solution_comparison.png, slices_fixed_t.png, slices_late_time.png,")
+    print(f"                 slices_fixed_x.png, error_slices.png, 3d_surface_plot.png, training_history.png")
 
 
 if __name__ == "__main__":

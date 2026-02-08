@@ -17,12 +17,12 @@ problem:
   mesh_grading: 2.0   # β for graded mesh: t_n = (n/N)^β
 
 discretization:
-  N_x: 100            # Spatial grid points
-  N_t: 100            # Temporal grid points
-  N_collocation: 100  # Collocation points per batch
+  N_x: 50             # Spatial grid points
+  N_t: 50             # Temporal grid points (keep small - L1 scheme is O(N²))
+  N_collocation: 50   # Collocation points per batch
   N_boundary: 50      # Boundary points per batch
   N_initial: 50       # Initial condition points per batch
-  N_integral_quad: 20 # Quadrature points for integral approximation
+  N_integral_quad: 15 # Quadrature points for integral approximation
 
 network:
   input_dim: 2
