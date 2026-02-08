@@ -6,15 +6,16 @@ This branch implements a PINN solver for **time-fractional integro-differential 
 
 ## Table of Contents
 1. [Problem Formulation](#problem-formulation)
-2. [Mathematical Background](#mathematical-background)
-3. [The L1 Discretization Scheme](#the-l1-discretization-scheme)
-4. [Graded Mesh Construction](#graded-mesh-construction)
-5. [Collocation Point Selection](#collocation-point-selection)
-6. [Integral Term Approximation](#integral-term-approximation)
-7. [Neural Network Architecture](#neural-network-architecture)
-8. [Training Methodology](#training-methodology)
-9. [Results](#results)
-10. [Usage](#usage)
+2. [Results](#results)
+3. [Mathematical Background](#mathematical-background)
+4. [The L1 Discretization Scheme](#the-l1-discretization-scheme)
+5. [Graded Mesh Construction](#graded-mesh-construction)
+6. [Collocation Point Selection](#collocation-point-selection)
+7. [Integral Term Approximation](#integral-term-approximation)
+8. [Implementation Details](#implementation-details)
+9. [Neural Network Architecture](#neural-network-architecture)
+10. [Training Methodology](#training-methodology)
+11. [Usage](#usage)
 
 ---
 
@@ -46,6 +47,42 @@ $$D_t^{\alpha} u(x,t) - (x^2 + 1)\frac{\partial^2 u}{\partial x^2} + \int_0^t \s
 2. **Variable coefficient** $(x^2+1)$ in diffusion term
 3. **Weakly singular integral** with kernel $(t-s)^{-\beta}$
 4. **Non-homogeneous boundary conditions**
+
+---
+
+## Results
+
+### Final Accuracy
+
+| Metric | Value |
+|--------|-------|
+| **L2 Relative Error** | **0.54%** |
+| **L∞ Error** | 4.84% |
+| **Training Time** | ~2 hours |
+
+### Configuration
+
+| Parameter | Value |
+|-----------|-------|
+| Spatial points ($N_x$) | 50 |
+| Temporal points ($N_t$) | 50 |
+| Collocation points | 50 |
+| Epochs | 10,000 |
+| α (fractional order) | 0.5 |
+| β (integral singularity) | 0.5 |
+| Mesh grading ($\beta_{mesh}$) | 2.0 |
+
+### Output Plots
+
+All plots saved to `outputs/integro_diff_results/`:
+- `solution_comparison.png` - Exact vs Predicted heatmaps + error
+- `slices_fixed_t.png` - Solution slices at t = 0.1, 0.3, 0.5, 0.7, 0.9, 1.0
+- `slices_fixed_x.png` - Solution slices at x = 0.1, 0.25, 0.4, 0.6, 0.75, 0.9
+- `slices_late_time.png` - Late time slices (t = 0.90 to 0.99)
+- `slices_late_x.png` - Late spatial slices (x = 0.90 to 0.99)
+- `error_slices.png` - Error distribution at various times
+- `3d_surface_plot.png` - 3D visualization
+- `training_history.png` - Loss, L2, L∞ curves
 
 ---
 
@@ -379,42 +416,6 @@ $$\mathcal{L}_{IC} = \frac{1}{N_{IC}} \sum |u(x,0)|^2$$
 - **Cosine warmup scheduler:** 500 epochs linear warmup, then cosine decay to $10^{-5}$
 - **Gradient clipping:** max norm 1.0
 - **Weights:** $w_{PDE}=1$, $w_{BC}=20$, $w_{IC}=20$
-
----
-
-## Results
-
-### Final Accuracy
-
-| Metric | Value |
-|--------|-------|
-| **L2 Relative Error** | **0.54%** |
-| **L∞ Error** | 4.84% |
-| **Training Time** | ~2 hours |
-
-### Configuration
-
-| Parameter | Value |
-|-----------|-------|
-| Spatial points ($N_x$) | 50 |
-| Temporal points ($N_t$) | 50 |
-| Collocation points | 50 |
-| Epochs | 10,000 |
-| α (fractional order) | 0.5 |
-| β (integral singularity) | 0.5 |
-| Mesh grading ($\beta_{mesh}$) | 2.0 |
-
-### Output Plots
-
-All plots saved to `outputs/integro_diff_results/`:
-- `solution_comparison.png` - Exact vs Predicted heatmaps + error
-- `slices_fixed_t.png` - Solution slices at t = 0.1, 0.3, 0.5, 0.7, 0.9, 1.0
-- `slices_fixed_x.png` - Solution slices at x = 0.1, 0.25, 0.4, 0.6, 0.75, 0.9
-- `slices_late_time.png` - Late time slices (t = 0.90 to 0.99)
-- `slices_late_x.png` - Late spatial slices (x = 0.90 to 0.99)
-- `error_slices.png` - Error distribution at various times
-- `3d_surface_plot.png` - 3D visualization
-- `training_history.png` - Loss, L2, L∞ curves
 
 ---
 
