@@ -140,14 +140,38 @@ class IntegroDifferentialResidual:
         """
         Compute weakly singular integral: ∫₀ᵗ sin(x)(t-s)^{-β} u(x,s) ds
         
-        Uses composite trapezoidal rule with graded mesh points.
-        For weakly singular integrals, we use the available mesh points.
+        Uses KERNEL-AWARE PRODUCT INTEGRATION on the graded mesh.
+        
+        Idea: On each sub-interval [t_j, t_{j+1}], approximate u(x,s) linearly
+        and integrate the singular kernel (t_n - s)^{-β} analytically:
+        
+            ∫_{t_j}^{t_{j+1}} (t_n - s)^{-β} u(x,s) ds
+              ≈ u(x, t_j) · w_j^L  +  u(x, t_{j+1}) · w_j^R
+        
+        where the weights are computed by integrating the kernel against
+        the piecewise-linear basis functions exactly:
+        
+            w_j^L = (1/h_j) ∫_{t_j}^{t_{j+1}} (t_n - s)^{-β} (t_{j+1} - s) ds
+            w_j^R = (1/h_j) ∫_{t_j}^{t_{j+1}} (t_n - s)^{-β} (s - t_j) ds
+        
+        With substitution τ = t_n - s, letting a = t_n - t_j, b = t_n - t_{j+1}:
+        
+            w_j^L = (1/h_j) [ (a^{2-β} - b^{2-β})/(2-β) - b·(a^{1-β} - b^{1-β})/(1-β) ]
+            w_j^R = (1/h_j) [ a·(a^{1-β} - b^{1-β})/(1-β) - (a^{2-β} - b^{2-β})/(2-β) ]
+        
+        Advantages over midpoint rule:
+        - Singular kernel handled analytically (no numerical error from singularity)
+        - Only the smooth part u(x,s) is approximated
+        - Exact for piecewise-linear u (second-order in smooth regions)
         """
         batch_size = x.shape[0]
         result = torch.zeros(batch_size, dtype=torch.float64, device=self.device)
         
         unique_n = torch.unique(n_indices)
         t_nodes = self.mesh.get_nodes()
+        beta = self.beta
+        one_minus_beta = 1.0 - beta
+        two_minus_beta = 2.0 - beta
         
         for n in unique_n:
             n_val = n.item()
@@ -164,26 +188,55 @@ class IntegroDifferentialResidual:
             
             sin_x = torch.sin(x_n)
             
-            # Compute integral using trapezoidal rule on graded mesh
+            # Precompute u at all mesh nodes t_0, t_1, ..., t_n in one batched call
+            # Stack all (x, t) pairs: for each of the num_points x-values,
+            # we need u evaluated at t_0, t_1, ..., t_n
+            with torch.no_grad():
+                u_at_nodes = []
+                for j_idx in range(n_val + 1):
+                    t_j_expanded = t_nodes[j_idx].expand(num_points)
+                    u_j = self.model(x_n, t_j_expanded).squeeze()
+                    u_at_nodes.append(u_j)
+                # u_at_nodes[j] has shape (num_points,) for j = 0, ..., n_val
+            
+            # Compute integral using product integration weights
             integral_sum = torch.zeros(num_points, dtype=torch.float64, device=self.device)
             
             for j in range(n_val):
-                t_j = t_nodes[j]
-                t_j_plus_1 = t_nodes[j + 1]
-                h_j = t_j_plus_1 - t_j
+                # a = t_n - t_j,  b = t_n - t_{j+1},  h_j = t_{j+1} - t_j = a - b
+                a = (t_n - t_nodes[j]).item()
+                b = (t_n - t_nodes[j + 1]).item()
+                h_j = a - b  # = t_{j+1} - t_j
                 
-                # Midpoint of interval for kernel evaluation
-                t_mid = (t_j + t_j_plus_1) / 2
+                if h_j < 1e-30:
+                    continue
                 
-                # Kernel at midpoint: (t_n - t_mid)^{-β}
-                kernel = (t_n - t_mid) ** (-self.beta)
+                # Compute analytically integrated kernel moments
+                a_1 = a ** one_minus_beta  # a^{1-β}
+                a_2 = a ** two_minus_beta  # a^{2-β}
                 
-                # u at midpoint (use linear interpolation or just evaluate at midpoint)
-                with torch.no_grad():
-                    t_mid_expanded = t_mid.expand(num_points)
-                    u_mid = self.model(x_n, t_mid_expanded).squeeze()
+                if b > 1e-30:
+                    b_1 = b ** one_minus_beta  # b^{1-β}
+                    b_2 = b ** two_minus_beta  # b^{2-β}
+                else:
+                    # b = 0 (last interval, j = n-1): b^{1-β} = 0, b^{2-β} = 0
+                    b_1 = 0.0
+                    b_2 = 0.0
                 
-                integral_sum = integral_sum + kernel * u_mid * h_j
+                # Product integration weights
+                # w_j^L = (1/h_j) [ (a^{2-β} - b^{2-β})/(2-β) - b·(a^{1-β} - b^{1-β})/(1-β) ]
+                # w_j^R = (1/h_j) [ a·(a^{1-β} - b^{1-β})/(1-β) - (a^{2-β} - b^{2-β})/(2-β) ]
+                moment_1 = (a_1 - b_1) / one_minus_beta   # ∫ τ^{-β} dτ
+                moment_2 = (a_2 - b_2) / two_minus_beta   # ∫ τ^{1-β} dτ
+                
+                b_val = (t_n - t_nodes[j + 1]).item()
+                a_val = (t_n - t_nodes[j]).item()
+                
+                w_left = (moment_2 - b_val * moment_1) / h_j
+                w_right = (a_val * moment_1 - moment_2) / h_j
+                
+                # Accumulate: w_L * u(x, t_j) + w_R * u(x, t_{j+1})
+                integral_sum = integral_sum + w_left * u_at_nodes[j] + w_right * u_at_nodes[j + 1]
             
             result[mask] = sin_x * integral_sum
             
