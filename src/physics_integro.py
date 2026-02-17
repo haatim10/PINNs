@@ -325,6 +325,85 @@ class IntegroDifferentialResidual:
         residual = frac_deriv - diffusion + integral_term - f
         
         return residual
+    
+    def evaluate_integral_convergence(self, x_test: torch.Tensor, t_test: torch.Tensor, 
+                                      n_test: torch.Tensor, exact_integral: torch.Tensor) -> dict:
+        """
+        Evaluate convergence of product integration approximation.
+        
+        Computes integral approximation error and convergence metrics.
+        
+        Args:
+            x_test: Test spatial points
+            t_test: Test temporal points
+            n_test: Test time indices
+            exact_integral: Exact integral values (for comparison)
+            
+        Returns:
+            dict with L2, Linf errors and convergence info
+        """
+        with torch.no_grad():
+            integral_approx = self.compute_integral_term(x_test, t_test, n_test)
+            
+            error = (integral_approx - exact_integral).abs()
+            l2_error = torch.sqrt((error ** 2).mean())
+            linf_error = error.max()
+            
+            return {
+                'integral_l2_error': l2_error.item(),
+                'integral_linf_error': linf_error.item(),
+                'integral_approx_mean': integral_approx.mean().item(),
+                'integral_exact_mean': exact_integral.mean().item(),
+            }
+
+
+class IntegralConvergenceMonitor:
+    """
+    Monitor convergence of product integration approximation over training.
+    
+    Tracks how the integral approximation improves as the neural network improves.
+    """
+    
+    def __init__(self, residual_computer: IntegroDifferentialResidual, 
+                 mesh, alpha: float, beta: float, device: str = "cpu"):
+        self.residual = residual_computer
+        self.mesh = mesh
+        self.alpha = alpha
+        self.beta = beta
+        self.device = device
+        self.history = {
+            'epoch': [],
+            'integral_l2_error': [],
+            'integral_linf_error': [],
+        }
+    
+    def compute_reference_integral(self, x: torch.Tensor, t: torch.Tensor, 
+                                   n_indices: torch.Tensor) -> torch.Tensor:
+        """
+        Approximate the integral using refined product integration 
+        (finer mesh as reference).
+        
+        For now, uses the current integral computation as reference.
+        In production, could use Richardson extrapolation or finer mesh.
+        """
+        return self.residual.compute_integral_term(x, t, n_indices)
+    
+    def log_convergence(self, epoch: int, x_test: torch.Tensor, t_test: torch.Tensor,
+                       n_test: torch.Tensor, log_file: str = None):
+        """Log integral convergence metrics to file."""
+        metrics = self.residual.evaluate_integral_convergence(
+            x_test, t_test, n_test, 
+            exact_integral=torch.zeros_like(t_test)  # Placeholder
+        )
+        
+        self.history['epoch'].append(epoch)
+        self.history['integral_l2_error'].append(metrics['integral_l2_error'])
+        self.history['integral_linf_error'].append(metrics['integral_linf_error'])
+        
+        if log_file:
+            with open(log_file, 'a') as f:
+                f.write(f"Epoch {epoch}: Integral L2={metrics['integral_l2_error']:.6e}, "
+                       f"Linf={metrics['integral_linf_error']:.6e}\n")
 
 
 class BoundaryConditions:

@@ -17,9 +17,9 @@ problem:
   mesh_grading: 2.0   # β for graded mesh: t_n = (n/N)^β
 
 discretization:
-  N_x: 150            # Spatial grid points
-  N_t: 150            # Temporal grid points
-  N_collocation: 75   # Collocation points per batch
+  N_x: 200            # Spatial grid points
+  N_t: 200            # Temporal grid points
+  N_collocation: 100  # Collocation points per batch
   N_boundary: 50      # Boundary points per batch
   N_initial: 50       # Initial condition points per batch
   N_integral_quad: 15 # Quadrature points for integral approximation
@@ -32,11 +32,11 @@ network:
 
 training:
   epochs: 20000
-  learning_rate: 0.001
+  learning_rate: 0.0005
   scheduler:
     enabled: true
     type: cosine_warmup
-    warmup_epochs: 500
+    warmup_epochs: 1000
     min_lr: 0.00001
   lbfgs:
     enabled: false    # Disabled - using Adam only
