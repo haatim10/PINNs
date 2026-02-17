@@ -1,5 +1,7 @@
 # PI-fMI: Physics-Informed Neural Networks for Fractional Integro-Differential Equations
 
+**`integro-differential-product-integration` branch:** Enhanced version with kernel-aware product integration for weakly singular integrals, larger problem (200×200 grid), and integral convergence monitoring.
+
 This branch implements a PINN solver for **time-fractional integro-differential equations** with variable coefficients and weakly singular Volterra integrals.
 
 ---
@@ -52,7 +54,10 @@ $$D_t^{\alpha} u(x,t) - (x^2 + 1)\frac{\partial^2 u}{\partial x^2} + \int_0^t \s
 
 ## Results
 
-### Final Accuracy
+### Current Status
+Training with **kernel-aware product integration** on 200×200 grid (20,000 epochs) — results pending.
+
+### Baseline Results (Original Branch: 50×50 grid)
 
 | Metric | Value |
 |--------|-------|
@@ -60,14 +65,17 @@ $$D_t^{\alpha} u(x,t) - (x^2 + 1)\frac{\partial^2 u}{\partial x^2} + \int_0^t \s
 | **L∞ Error** | 4.84% |
 | **Training Time** | ~2 hours |
 
-### Configuration
+### Configuration (Current Branch: 200×200 Product Integration)
 
 | Parameter | Value |
 |-----------|-------|
-| Spatial points ($N_x$) | 50 |
-| Temporal points ($N_t$) | 50 |
-| Collocation points | 50 |
-| Epochs | 10,000 |
+| Spatial points ($N_x$) | 200 |
+| Temporal points ($N_t$) | 200 |
+| Collocation points | 100 |
+| Epochs | 20,000 |
+| Learning rate (peak) | 5e-4 |
+| Warmup epochs | 1000 |
+| Integral method | **Kernel-aware product integration** (new) |
 | α (fractional order) | 0.5 |
 | β (integral singularity) | 0.5 |
 | Mesh grading ($\beta_{mesh}$) | 2.0 |
@@ -243,16 +251,37 @@ $$I(x,t) = \int_0^t \sin(x)(t-s)^{-\beta}u(x,s)\,ds$$
 
 The kernel $(t-s)^{-\beta}$ is singular at $s=t$.
 
-### Quadrature on Graded Mesh
+### Kernel-Aware Product Integration (New Approach)
 
-We use composite quadrature on the graded mesh intervals:
+**Motivation:** Standard quadrature (e.g., midpoint rule) evaluates the singular kernel numerically, leading to inaccuracy near the singularity. Instead, **integrate the singular kernel analytically** and approximate only the smooth part.
 
-$$I(x,t_n) \approx \sin(x) \sum_{j=0}^{n-1} \int_{t_j}^{t_{j+1}} (t_n-s)^{-\beta} u(x,s) ds$$
+**Method:** On each sub-interval $[t_j, t_{j+1}]$, approximate $u(x,s)$ **linearly** and integrate the singular kernel **exactly**:
 
-For each interval, use midpoint rule:
-$$\int_{t_j}^{t_{j+1}} (t_n-s)^{-\beta} u(x,s) ds \approx (t_n - t_{mid})^{-\beta} \cdot u(x, t_{mid}) \cdot h_j$$
+$$\int_{t_j}^{t_{j+1}} (t_n - s)^{-\beta} u(x,s)\, ds \approx w_j^L \cdot u(x, t_j) + w_j^R \cdot u(x, t_{j+1})$$
 
-where $t_{mid} = (t_j + t_{j+1})/2$ and $h_j = t_{j+1} - t_j$.
+The **analytically computed weights** are:
+
+$$w_j^L = \frac{1}{h_j}\left[\frac{a^{2-\beta} - b^{2-\beta}}{2-\beta} - b\cdot\frac{a^{1-\beta} - b^{1-\beta}}{1-\beta}\right]$$
+
+$$w_j^R = \frac{1}{h_j}\left[a\cdot\frac{a^{1-\beta} - b^{1-\beta}}{1-\beta} - \frac{a^{2-\beta} - b^{2-\beta}}{2-\beta}\right]$$
+
+where $a = t_n - t_j$, $b = t_n - t_{j+1}$, $h_j = a - b$.
+
+**Advantages:**
+- Singular kernel handled **analytically** (no numerical singularity error)
+- Only smooth part $u$ is linearly interpolated (second-order accurate in smooth regions)
+- Evaluates neural network at grid nodes (precomputable, efficient batching)
+- Natural fit for graded meshes (clustering near $t=0$ handles singularity)
+
+**Full integral approximation:**
+$$I(x,t_n) \approx \sin(x) \sum_{j=0}^{n-1} \left[w_j^L \cdot u(x, t_j) + w_j^R \cdot u(x, t_{j+1})\right]$$
+
+### Implementation
+
+See `src/physics_integro.py`:
+- `compute_integral_term()` — Product integration with analytical kernel weights
+- `evaluate_integral_convergence()` — Tracks integral approximation error over training
+- `IntegralConvergenceMonitor` — Logs convergence metrics
 
 ---
 
@@ -267,10 +296,10 @@ The code builds and samples from a structured grid. Here's the exact process:
 **Step 1: Create spatial and temporal grids**
 ```python
 # Spatial: uniform grid on [0, 1]
-self.x_grid = torch.linspace(0, 1, N_x)   # e.g., [0, 0.02, 0.04, ..., 1.0] for N_x=50
+self.x_grid = torch.linspace(0, 1, N_x)   # e.g., [0, 0.02, 0.04, ..., 1.0] for N_x=200
 
 # Temporal: graded mesh t_n = (n/N)^β
-self.t_grid = mesh.get_nodes()            # e.g., [0, 0.0004, 0.0016, ..., 1.0] for N_t=50, β=2
+self.t_grid = mesh.get_nodes()            # e.g., [0, 0.000025, 0.0001, ..., 1.0] for N_t=200, β=2
 ```
 
 **Step 2: Build interior meshgrid (exclude boundaries)**
@@ -413,9 +442,35 @@ $$\mathcal{L}_{IC} = \frac{1}{N_{IC}} \sum |u(x,0)|^2$$
 ### Optimizer Configuration
 
 - **Adam optimizer** with learning rate $10^{-3}$
-- **Cosine warmup scheduler:** 500 epochs linear warmup, then cosine decay to $10^{-5}$
+- **Cosine warmup scheduler:** 1000 epochs linear warmup, then cosine decay to $10^{-5}$
 - **Gradient clipping:** max norm 1.0
 - **Weights:** $w_{PDE}=1$, $w_{BC}=20$, $w_{IC}=20$
+
+---
+
+## Branch Comparison
+
+### `integro-differential` (Baseline)
+- Grid: 50×50 spatial/temporal
+- Collocation: 50 points
+- Epochs: 10,000
+- Integral method: Midpoint rule
+- Learning rate: 0.001
+- Warmup: 500 epochs
+- **L2 Error: 0.54%**
+- Training time: ~2 hours
+
+### `integro-differential-product-integration` (Enhanced)
+- Grid: 200×200 spatial/temporal (8× larger)
+- Collocation: 100 points
+- Epochs: 20,000 (2× longer)
+- Integral method: **Kernel-aware product integration** (analytically integrated kernel)
+- Learning rate: 0.0005 (stabilized for larger problem)
+- Warmup: 1000 epochs (more gradual)
+- Status: Training in progress
+- Expected improvement: Better accuracy on larger problem, more refined integral approximation
+
+**Key difference:** Product integration eliminates numerical error from the singular kernel by integrating it analytically, then only approximating the smooth solution linearly on each sub-interval.
 
 ---
 
