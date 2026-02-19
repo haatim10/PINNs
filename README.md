@@ -74,6 +74,35 @@ $$D_t^{\alpha} u(x,t) - (x^2 + 1)\frac{\partial^2 u}{\partial x^2} + \int_0^t \s
 
 **Note:** The enhanced version solves a **16× larger problem** (200×200 vs 50×50 grid). The L2 error is higher because the finer grid requires more precision from the network. The critical advance is the **kernel-aware product integration**, which analytically integrates the singular kernel $(t-s)^{-\beta}$, eliminating singularity errors.
 
+### Early Stopping Analysis
+
+We analyzed all 40 checkpoints to find optimal stopping points:
+
+| Criterion | Best Epoch | L2 Error | Linf Error | Notes |
+|-----------|------------|----------|------------|-------|
+| **Minimize L2** | 20,000 | **0.77%** | 0.0606 | Full training |
+| **Minimize Linf** | 11,500 | 1.41% | **0.0507** | 42% time saved |
+| **⭐ Optimal Balance** | **17,500** | **0.81%** | **0.0512** | **12.5% time saved** |
+
+**Recommendation:** Use **Epoch 17,500** for best balance:
+- L2 only 5% worse than absolute minimum
+- Linf only 1% worse than absolute minimum
+- Saves 12.5% training time (~4 hours)
+
+**Early Stopping Tools:**
+```bash
+# Analyze all checkpoints
+python scripts/early_stopping_recommendation.py
+
+# Compare specific epochs
+python scripts/early_stopping_comparison.py --epochs 11500 20000
+
+# Get best model results
+python scripts/early_stopping_results.py --metric l2
+```
+
+See [EARLY_STOPPING_GUIDE.md](EARLY_STOPPING_GUIDE.md) for detailed analysis and usage instructions.
+
 ### Configuration (Current Branch: 200×200 Product Integration)
 
 | Parameter | Value |
@@ -92,9 +121,14 @@ $$D_t^{\alpha} u(x,t) - (x^2 + 1)\frac{\partial^2 u}{\partial x^2} + \int_0^t \s
 ### Output Files
 
 - `outputs/checkpoints_integro_diff/` - 40 model checkpoints (every 500 epochs)
-- `outputs/integro_diff_results/` - 8 visualization plots
+- `outputs/integro_diff_results/` - Visualization plots (solution, errors, slices)
 - `outputs/integro_diff_points.csv` - Collocation point log
 - `outputs/l1_discretization_points.csv` - L1 scheme point tracking
+
+**Early Stopping Analysis Files:**
+- `outputs/integro_diff_results/early_stopping_comparison.png` - Epoch comparison grid
+- `outputs/integro_diff_results/error_history_best_epochs.png` - Error curves with best points
+- `outputs/integro_diff_results/early_stopping_summary.txt` - Text summary
 
 ### Output Plots
 
