@@ -76,32 +76,15 @@ $$D_t^{\alpha} u(x,t) - (x^2 + 1)\frac{\partial^2 u}{\partial x^2} + \int_0^t \s
 
 ### Early Stopping Analysis
 
-We analyzed all 40 checkpoints to find optimal stopping points:
+Analysis of all 40 checkpoints shows optimal stopping before epoch 20,000:
 
-| Criterion | Best Epoch | L2 Error | Linf Error | Notes |
-|-----------|------------|----------|------------|-------|
-| **Minimize L2** | 20,000 | **0.77%** | 0.0606 | Full training |
-| **Minimize Linf** | 11,500 | 1.41% | **0.0507** | 42% time saved |
-| **⭐ Optimal Balance** | **17,500** | **0.81%** | **0.0512** | **12.5% time saved** |
+| Metric | Epoch 20,000 | Epoch 11,500 | Epoch 17,500 ⭐ |
+|--------|------|------|------|
+| **L2 Error** | 0.77% | 1.41% | **0.81%** |
+| **Linf Error** | 0.0606 | **0.0507** | **0.0512** |
+| **Training Time** | 32 hrs | 18.4 hrs | 28 hrs |
 
-**Recommendation:** Use **Epoch 17,500** for best balance:
-- L2 only 5% worse than absolute minimum
-- Linf only 1% worse than absolute minimum
-- Saves 12.5% training time (~4 hours)
-
-**Early Stopping Tools:**
-```bash
-# Analyze all checkpoints
-python scripts/early_stopping_recommendation.py
-
-# Compare specific epochs
-python scripts/early_stopping_comparison.py --epochs 11500 20000
-
-# Get best model results
-python scripts/early_stopping_results.py --metric l2
-```
-
-See [EARLY_STOPPING_GUIDE.md](EARLY_STOPPING_GUIDE.md) for detailed analysis and usage instructions.
+**Recommendation:** Use **Epoch 17,500** for best balance—saves 12.5% training time with only 5% increase in L2 error and 1% in Linf error.
 
 ### Configuration (Current Branch: 200×200 Product Integration)
 
@@ -124,11 +107,6 @@ See [EARLY_STOPPING_GUIDE.md](EARLY_STOPPING_GUIDE.md) for detailed analysis and
 - `outputs/integro_diff_results/` - Visualization plots (solution, errors, slices)
 - `outputs/integro_diff_points.csv` - Collocation point log
 - `outputs/l1_discretization_points.csv` - L1 scheme point tracking
-
-**Early Stopping Analysis Files:**
-- `outputs/integro_diff_results/early_stopping_comparison.png` - Epoch comparison grid
-- `outputs/integro_diff_results/error_history_best_epochs.png` - Error curves with best points
-- `outputs/integro_diff_results/early_stopping_summary.txt` - Text summary
 
 ### Output Plots
 
