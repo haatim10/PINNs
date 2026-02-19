@@ -28,7 +28,7 @@ network:
   input_dim: 2
   output_dim: 1
   hidden_layers: [64, 64, 64, 64]
-  activation: mexican_hat
+  activation: tanh            # Note: trained with tanh (mexican_hat now available for future runs)
 
 training:
   epochs: 20000

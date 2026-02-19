@@ -11,15 +11,15 @@ We've implemented a comprehensive early stopping analysis toolkit to identify th
 | Metric | Best L2 Epoch | Best Linf Epoch | Optimal Balance |
 |--------|---------------|-----------------|-----------------|
 | **Epoch** | 20,000 | 11,500 | **17,500** ⭐ |
-| **L2 Error** | **0.7695%** | 1.4125% | 0.8085% |
+| **L2 Error** | **1.52%** | 2.80% | 1.60% |
 | **Linf Error** | 6.0594e-02 | **5.0698e-02** | 5.1197e-02 |
 | **Training Time** | Full (32 hrs) | 57.5% complete | 87.5% complete |
 
 ### Interpretation
 
-**L2 Error (Mean Squared Error):**
+**L2 Error (Relative L2 Norm):**
 - Continues improving until epoch 20,000
-- Final value: 0.7695% (excellent accuracy)
+- Final value: 1.52% (excellent accuracy)
 - Training through full epochs is worthwhile
 
 **Linf Error (Maximum Error):**
@@ -80,7 +80,7 @@ checkpoint_path = 'outputs/checkpoints_integro_diff/checkpoint_epoch_17500.pt'
 checkpoint = torch.load(checkpoint_path)
 
 # Create model
-model = PINN(input_dim=2, output_dim=1, hidden_layers=[64]*4, activation='sin')
+model = PINN(input_dim=2, output_dim=1, hidden_layers=[64]*4, activation='tanh')
 model.load_state_dict(checkpoint['model_state_dict'])
 
 # You now have the best model loaded!
@@ -159,9 +159,9 @@ Choose your stopping epoch based on your priorities:
 
 | Priority | Recommendation | Details |
 |----------|-----------------|---------|
-| **Maximum Accuracy** | Epoch 20,000 | Best L2 (0.7695%), sacrifice some Linf |
-| **Minimize Max Error** | Epoch 11,500 | Best Linf (5.07e-02), but L2=1.41% |
-| **⭐ Best Balance** | **Epoch 17,500** | **L2=0.8085%, Linf=5.12e-02** |
+| **Maximum Accuracy** | Epoch 20,000 | Best L2 (1.52%), sacrifice some Linf |
+| **Minimize Max Error** | Epoch 11,500 | Best Linf (5.07e-02), but L2=2.80% |
+| **⭐ Best Balance** | **Epoch 17,500** | **L2=1.60%, Linf=5.12e-02** |
 | **Save Time** | Epoch 17,500 | 12.5% faster, near-optimal accuracy |
 | **Already Trained** | Epoch 20,000 | Full convergence achieved |
 

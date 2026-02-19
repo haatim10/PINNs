@@ -16,7 +16,13 @@ from src.model import PINN
 
 
 def analyze_all_checkpoints(checkpoint_dir):
-    """Extract error metrics from all checkpoints."""
+    """Extract error metrics from all checkpoints.
+    
+    Note: History values stored in checkpoints are RMSE (not relative L2).
+    Epoch rankings are the same for both metrics since relative L2 = RMSE / ||u_exact||
+    and ||u_exact|| is constant. Displayed values are RMSE; multiply by ~1.98 for
+    approximate relative L2 percentage.
+    """
     checkpoint_dir = Path(checkpoint_dir)
     all_data = {}
     

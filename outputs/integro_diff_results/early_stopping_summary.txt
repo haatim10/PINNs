@@ -5,7 +5,7 @@ EARLY STOPPING COMPARISON SUMMARY
 
 Metric               Epoch        Best L2 Epoch        Best Linf Epoch     
 --------------------------------------------------------------------------------
-L2 Error (%):       0.7695      (20000 epochs)   1.4125       (11500 epochs)
+L2 Error (%):       1.5238      (20000 epochs)   2.7969       (11500 epochs)
 Linf Error:         6.0594e-02  (20000 epochs)   5.0698e-02   (11500 epochs)
 Mean Error:         5.0281e-03  (20000 epochs)   1.0450e-02   (11500 epochs)
 Median Error:       3.3673e-03  (20000 epochs)   7.4732e-03   (11500 epochs)
@@ -14,12 +14,12 @@ Median Error:       3.3673e-03  (20000 epochs)   7.4732e-03   (11500 epochs)
 EARLY STOPPING RECOMMENDATIONS:
 --------------------------------------------------------------------------------
 ► Best L2 Error: Epoch 20000
-  - L2: 0.7695%
+  - L2: 1.5238%
   - Linf: 6.0594e-02 (19.52% worse than best)
 
 ► Best Linf Error: Epoch 11500
   - Linf: 5.0698e-02
-  - L2: 1.4125% (83.55% worse than best)
+  - L2: 2.7969% (83.55% worse than best)
 
 ► Trade-off assessment:
   - L2 error increases by 83.55% if using Linf-best epoch

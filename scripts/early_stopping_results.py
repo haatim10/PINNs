@@ -93,7 +93,7 @@ def load_best_checkpoint(checkpoint_dir, metric='l2'):
 
 
 def compute_errors(model, alpha, device, N_x=100, N_t=100):
-    """Compute L2 and Linf errors against exact solution."""
+    """Compute relative L2 and Linf errors against exact solution."""
     model.eval()
     x = torch.linspace(0, 1, N_x, dtype=torch.float64, device=device)
     t = torch.linspace(0.01, 1, N_t, dtype=torch.float64, device=device)  # Avoid t=0
@@ -104,7 +104,7 @@ def compute_errors(model, alpha, device, N_x=100, N_t=100):
         u_exact = (T ** alpha) * torch.cos(np.pi * X)
         
         error = torch.abs(u_pred - u_exact)
-        l2_error = torch.sqrt(torch.mean(error ** 2)).item()
+        l2_error = (torch.norm(error) / torch.norm(u_exact)).item()
         linf_error = torch.max(error).item()
     
     return l2_error, linf_error, u_pred, u_exact, error

@@ -80,7 +80,7 @@ Analysis of all 40 checkpoints shows optimal stopping before epoch 20,000:
 
 | Metric | Epoch 20,000 | Epoch 11,500 | Epoch 17,500 ⭐ |
 |--------|------|------|------|
-| **L2 Error** | 0.77% | 1.41% | **0.81%** |
+| **L2 Error** | **1.52%** | 2.80% | **1.60%** |
 | **Linf Error** | 0.0606 | **0.0507** | **0.0512** |
 | **Training Time** | 32 hrs | 18.4 hrs | 28 hrs |
 
@@ -339,7 +339,7 @@ X, T = torch.meshgrid(x_interior, t_interior, indexing='ij')
 n_values = torch.arange(1, N_t + 1)   # Time indices [1, 2, ..., N_t]
 
 # Flatten to get all interior grid points
-self.x_interior = X.flatten()      # Shape: (48 × 50) = 2400 points
+self.x_interior = X.flatten()      # Shape: (N_x-2) × N_t interior points
 self.t_interior = T.flatten()
 self.n_interior = N_grid.flatten()  # Corresponding time index for each point
 ```
@@ -369,13 +369,16 @@ epoch,point_idx,x,t,n
 For a collocation point at time level $n$, we compute:
 $$\int_0^{t_n} \sin(x)(t_n-s)^{-\beta} u(x,s)\, ds$$
 
-**Implementation in `src/physics_integro.py`:**
+**Implementation in `src/physics_integro.py` (Product Integration):**
 
 ```python
 def compute_integral_term(self, x, t, n_indices):
     """
     Compute weakly singular integral: ∫₀ᵗ sin(x)(t-s)^{-β} u(x,s) ds
-    Uses composite midpoint rule on graded mesh.
+    Uses kernel-aware product integration on the graded mesh.
+    
+    On each [t_j, t_{j+1}], approximate u(x,s) linearly and integrate
+    the singular kernel (t_n - s)^{-β} analytically.
     """
     for n in unique_n:
         n_val = n.item()
@@ -385,24 +388,28 @@ def compute_integral_term(self, x, t, n_indices):
         
         sin_x = torch.sin(x_n)  # Factor out sin(x)
         
-        # Sum over all mesh intervals [t_j, t_{j+1}] for j = 0, ..., n-1
+        # Precompute u at all mesh nodes t_0, ..., t_n
+        with torch.no_grad():
+            u_at_nodes = [self.model(x_n, t_nodes[j]) for j in range(n_val + 1)]
+        
+        # Sum over all mesh intervals [t_j, t_{j+1}]
         integral_sum = torch.zeros(num_points)
         
         for j in range(n_val):
-            t_j = t_nodes[j]
-            t_j_plus_1 = t_nodes[j + 1]
-            h_j = t_j_plus_1 - t_j                    # Interval width
-            t_mid = (t_j + t_j_plus_1) / 2            # Midpoint
+            a = (t_n - t_nodes[j]).item()      # t_n - t_j
+            b = (t_n - t_nodes[j + 1]).item()  # t_n - t_{j+1}
+            h_j = a - b                         # = t_{j+1} - t_j
             
-            # Kernel: (t_n - t_mid)^{-β}
-            kernel = (t_n - t_mid) ** (-self.beta)
+            # Analytically integrated kernel moments
+            moment_1 = (a**(1-β) - b**(1-β)) / (1-β)   # ∫ τ^{-β} dτ
+            moment_2 = (a**(2-β) - b**(2-β)) / (2-β)   # ∫ τ^{1-β} dτ
             
-            # Evaluate neural network at midpoint (no gradient needed for history)
-            with torch.no_grad():
-                u_mid = self.model(x_n, t_mid)
+            # Product integration weights
+            w_left  = (moment_2 - b * moment_1) / h_j
+            w_right = (a * moment_1 - moment_2) / h_j
             
-            # Accumulate: kernel × u × width
-            integral_sum += kernel * u_mid * h_j
+            # Accumulate: w_L * u(t_j) + w_R * u(t_{j+1})
+            integral_sum += w_left * u_at_nodes[j] + w_right * u_at_nodes[j + 1]
         
         result[mask] = sin_x * integral_sum
     
@@ -419,27 +426,22 @@ Only the current solution $u(x, t_n)$ needs gradients for backpropagation. Histo
 
 ## Neural Network Architecture
 
-### Mexican Hat Wavelet Activation
+### Activation Function
 
-$$\psi(x) = (1 - x^2) e^{-x^2/2}$$
-
-This wavelet-based activation provides:
-- Localized response (good for capturing solution structure)
-- Non-monotonic shape (better than tanh/ReLU for oscillatory solutions)
-- Bounded output (numerical stability)
+The current trained model uses **Tanh** activation. The Mexican Hat wavelet activation ($\psi(x) = (1 - x^2) e^{-x^2/2}$) is also available in the codebase for future experiments.
 
 ### Network Structure
 
 ```
 Input: (x, t) ∈ R²
   ↓
-Linear(2 → 64) → Mexican Hat
+Linear(2 → 64) → Tanh
   ↓
-Linear(64 → 64) → Mexican Hat
+Linear(64 → 64) → Tanh
   ↓
-Linear(64 → 64) → Mexican Hat
+Linear(64 → 64) → Tanh
   ↓
-Linear(64 → 64) → Mexican Hat
+Linear(64 → 64) → Tanh
   ↓
 Linear(64 → 1)
   ↓
@@ -469,7 +471,7 @@ $$\mathcal{L}_{IC} = \frac{1}{N_{IC}} \sum |u(x,0)|^2$$
 
 ### Optimizer Configuration
 
-- **Adam optimizer** with learning rate $10^{-3}$
+- **Adam optimizer** with learning rate $5 \times 10^{-4}$
 - **Cosine warmup scheduler:** 1000 epochs linear warmup, then cosine decay to $10^{-5}$
 - **Gradient clipping:** max norm 1.0
 - **Weights:** $w_{PDE}=1$, $w_{BC}=20$, $w_{IC}=20$
@@ -495,8 +497,8 @@ $$\mathcal{L}_{IC} = \frac{1}{N_{IC}} \sum |u(x,0)|^2$$
 - Integral method: **Kernel-aware product integration** (analytically integrated kernel)
 - Learning rate: 0.0005 (stabilized for larger problem)
 - Warmup: 1000 epochs (more gradual)
-- Status: Training in progress
-- Expected improvement: Better accuracy on larger problem, more refined integral approximation
+- Status: **Completed** — L2 = 1.52%, Linf = 0.0606
+- Training time: ~32 hours
 
 **Key difference:** Product integration eliminates numerical error from the singular kernel by integrating it analytically, then only approximating the smooth solution linearly on each sub-interval.
 
@@ -556,7 +558,7 @@ PINNs/
 ├── configs/
 │   └── integro_differential.yaml    # Training configuration
 ├── src/
-│   ├── model.py                     # PINN architecture + Mexican Hat
+│   ├── model.py                     # PINN architecture (Tanh / Mexican Hat)
 │   ├── mesh.py                      # Graded mesh + L1 coefficients
 │   ├── physics_integro.py           # PDE residual computation
 │   └── ...
