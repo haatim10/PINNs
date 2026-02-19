@@ -354,10 +354,10 @@ def sample_collocation(self):
 **Proof from logged data (`outputs/integro_diff_points.csv`):**
 ```
 epoch,point_idx,x,t,n
-1,0,0.7755,0.0196,7      ← x from spatial grid, t = (7/50)² = 0.0196 ✓
-1,1,0.1633,0.2500,25     ← t = (25/50)² = 0.25 ✓
-1,2,0.8980,0.0016,2      ← t = (2/50)² = 0.0016 ✓
-1000,0,0.5306,0.3136,28  ← Different random sample at epoch 1000
+2000,0,0.7487,0.2601,102   ← t = (102/200)² = 0.2601 ✓
+2000,1,0.2563,0.3364,116   ← t = (116/200)² = 0.3364 ✓
+2000,2,0.2563,0.0992,63    ← t = (63/200)² = 0.0992 ✓
+2000,5,0.3015,0.1892,87    ← Different collocation point same epoch
 ```
 
 **Key insight:** The integer `n` (time index) is crucial because:
@@ -420,7 +420,7 @@ def compute_integral_term(self, x, t, n_indices):
 
 Only the current solution $u(x, t_n)$ needs gradients for backpropagation. History values $u(x, s)$ for $s < t_n$ are treated as fixed during each training step—this is the standard approach for time-stepping schemes in PINNs.
 
-**Computational cost:** For a point at time level $n$, we make $n$ forward passes through the network (one per quadrature point). With $N_t = 50$ and 50 collocation points, this means ~1250 forward passes per training iteration, explaining the ~1 second/iteration runtime.
+**Computational cost:** For a point at time level $n$, we make $n$ forward passes through the network (one per quadrature point). With $N_t = 200$ and 100 collocation points, this means ~10,000 forward passes per training iteration, explaining the longer runtime (~5-6 seconds/iteration).
 
 ---
 
@@ -556,19 +556,23 @@ k     Time Index      t_value         Coefficient          Role
 ```
 PINNs/
 ├── configs/
-│   └── integro_differential.yaml    # Training configuration
+│   └── integro_differential.yaml        # Training configuration
 ├── src/
-│   ├── model.py                     # PINN architecture (Tanh / Mexican Hat)
-│   ├── mesh.py                      # Graded mesh + L1 coefficients
-│   ├── physics_integro.py           # PDE residual computation
+│   ├── model.py                         # PINN architecture (Tanh / Mexican Hat)
+│   ├── mesh.py                          # Graded mesh + L1 coefficients
+│   ├── physics_integro.py               # PDE residual computation
 │   └── ...
 ├── scripts/
-│   └── train_integro_diff.py        # Training script
+│   ├── train_integro_diff.py            # Training script
+│   ├── early_stopping_results.py        # Best-epoch analysis
+│   ├── early_stopping_comparison.py     # Side-by-side epoch comparison
+│   └── early_stopping_recommendation.py # Optimal stopping recommendation
 ├── outputs/
-│   ├── checkpoints_integro_diff/    # Model checkpoints
-│   ├── integro_diff_results/        # Plots
-│   ├── integro_diff_points.csv      # Collocation points
-│   └── l1_discretization_points.csv # L1 history tracking
+│   ├── checkpoints_integro_diff/        # 40 model checkpoints
+│   ├── integro_diff_results/            # Plots
+│   ├── integro_diff_points.csv          # Collocation points
+│   └── l1_discretization_points.csv     # L1 history tracking
+├── EARLY_STOPPING_GUIDE.md              # Early stopping analysis guide
 └── README.md
 ```
 
