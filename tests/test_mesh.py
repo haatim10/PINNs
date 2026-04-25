@@ -1,4 +1,4 @@
-"""Unit tests for mesh generation and L1 coefficients."""
+"""Unit tests for graded mesh generation and L1 coefficients."""
 
 import pytest
 import torch
@@ -8,84 +8,91 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.mesh import GradedMesh, compute_l1_coefficients
+from src.mesh import GradedMesh, L1Coefficients
 
 
 class TestGradedMesh:
     """Tests for GradedMesh class."""
 
     def test_uniform_mesh(self):
-        """Test that r=1 gives uniform mesh."""
-        mesh = GradedMesh(T=1.0, N=10, r=1.0)
-        expected = np.linspace(0, 1, 11)
-        np.testing.assert_allclose(mesh.t, expected, rtol=1e-10)
+        """beta=1 should generate a uniform mesh."""
+        mesh = GradedMesh(N=10, beta=1.0, t_max=1.0)
+        expected = np.linspace(0.0, 1.0, 11)
+        np.testing.assert_allclose(mesh.get_nodes().cpu().numpy(), expected, rtol=1e-10)
 
     def test_graded_mesh_monotonic(self):
-        """Test that graded mesh is monotonically increasing."""
-        mesh = GradedMesh(T=1.0, N=20, r=2.0)
-        assert np.all(np.diff(mesh.t) > 0)
+        """Mesh nodes must be strictly increasing."""
+        mesh = GradedMesh(N=20, beta=2.0, t_max=1.0)
+        t = mesh.get_nodes().cpu().numpy()
+        assert np.all(np.diff(t) > 0)
 
     def test_graded_mesh_endpoints(self):
-        """Test that mesh starts at 0 and ends at T."""
-        T = 2.5
-        mesh = GradedMesh(T=T, N=15, r=1.5)
-        assert mesh.t[0] == 0.0
-        assert mesh.t[-1] == T
+        """Mesh must start at 0 and end at t_max."""
+        t_max = 2.5
+        mesh = GradedMesh(N=15, beta=1.5, t_max=t_max)
+        t = mesh.get_nodes().cpu().numpy()
+        assert t[0] == pytest.approx(0.0)
+        assert t[-1] == pytest.approx(t_max)
 
     def test_graded_mesh_finer_near_zero(self):
-        """Test that graded mesh (r>1) has finer spacing near t=0."""
-        mesh = GradedMesh(T=1.0, N=10, r=2.0)
-        # First step should be smaller than last step
-        assert mesh.tau[0] < mesh.tau[-1]
+        """For beta > 1, early steps should be smaller than late steps."""
+        mesh = GradedMesh(N=10, beta=2.0, t_max=1.0)
+        tau = mesh.tau.cpu().numpy()
+        assert tau[0] < tau[-1]
 
     def test_mesh_length(self):
-        """Test correct number of mesh points."""
+        """Check number of nodes and intervals."""
         N = 25
-        mesh = GradedMesh(T=1.0, N=N, r=1.5)
-        assert len(mesh.t) == N + 1
+        mesh = GradedMesh(N=N, beta=1.5, t_max=1.0)
+        assert len(mesh.get_nodes()) == N + 1
         assert len(mesh.tau) == N
 
-    def test_to_tensor(self):
-        """Test conversion to PyTorch tensor."""
-        mesh = GradedMesh(T=1.0, N=10, r=1.0)
-        t_tensor = mesh.to_tensor()
-        assert isinstance(t_tensor, torch.Tensor)
-        assert t_tensor.dtype == torch.float32
+    def test_nodes_dtype(self):
+        """Mesh nodes are expected to be float64 for stable fractional arithmetic."""
+        mesh = GradedMesh(N=10, beta=1.0, t_max=1.0)
+        assert isinstance(mesh.get_nodes(), torch.Tensor)
+        assert mesh.get_nodes().dtype == torch.float64
 
 
 class TestL1Coefficients:
-    """Tests for L1 scheme coefficients."""
+    """Tests for L1 discretization coefficients."""
 
-    def test_l1_coefficients_shape(self):
-        """Test coefficient matrix has correct shape."""
-        mesh = GradedMesh(T=1.0, N=10, r=1.0)
-        a = compute_l1_coefficients(alpha=0.5, mesh=mesh)
-        assert a.shape == (11, 11)
+    def test_l1_coefficients_shape_per_time_level(self):
+        """Each time level n must expose n+1 coefficients (including index 0)."""
+        mesh = GradedMesh(N=10, beta=1.0, t_max=1.0)
+        l1 = L1Coefficients(alpha=0.5, mesh=mesh)
 
-    def test_l1_coefficients_positive(self):
-        """Test that non-zero coefficients are positive."""
-        mesh = GradedMesh(T=1.0, N=10, r=1.0)
-        a = compute_l1_coefficients(alpha=0.5, mesh=mesh)
-        # Check upper triangular part
         for n in range(1, 11):
-            for k in range(n):
-                assert a[n, k] > 0
+            coeffs = l1.get_coefficients_for_n(n)
+            assert coeffs.shape == (n + 1,)
 
-    def test_l1_coefficients_zero_first_row(self):
-        """Test that first row is all zeros."""
-        mesh = GradedMesh(T=1.0, N=10, r=1.0)
-        a = compute_l1_coefficients(alpha=0.5, mesh=mesh)
-        np.testing.assert_array_equal(a[0, :], 0)
+    def test_l1_coefficients_positive_for_k_ge_1(self):
+        """All active L1 coefficients d_{n,k}, k>=1, should be positive."""
+        mesh = GradedMesh(N=10, beta=1.0, t_max=1.0)
+        l1 = L1Coefficients(alpha=0.5, mesh=mesh)
+
+        for n in range(1, 11):
+            coeffs = l1.get_coefficients_for_n(n).cpu().numpy()
+            assert np.all(coeffs[1:] > 0)
+
+    def test_l1_coefficients_zero_at_index_zero(self):
+        """Index 0 is unused in this formulation and should remain zero."""
+        mesh = GradedMesh(N=10, beta=1.0, t_max=1.0)
+        l1 = L1Coefficients(alpha=0.5, mesh=mesh)
+
+        for n in range(1, 11):
+            coeffs = l1.get_coefficients_for_n(n).cpu().numpy()
+            assert coeffs[0] == pytest.approx(0.0)
 
     def test_l1_different_alphas(self):
-        """Test coefficients for different alpha values."""
-        mesh = GradedMesh(T=1.0, N=5, r=1.0)
+        """Changing alpha should change the coefficients."""
+        mesh = GradedMesh(N=5, beta=1.0, t_max=1.0)
+        l1_a = L1Coefficients(alpha=0.5, mesh=mesh)
+        l1_b = L1Coefficients(alpha=0.8, mesh=mesh)
 
-        a_05 = compute_l1_coefficients(alpha=0.5, mesh=mesh)
-        a_08 = compute_l1_coefficients(alpha=0.8, mesh=mesh)
-
-        # Coefficients should be different for different alphas
-        assert not np.allclose(a_05, a_08)
+        coeffs_a = l1_a.get_coefficients_for_n(5).cpu().numpy()
+        coeffs_b = l1_b.get_coefficients_for_n(5).cpu().numpy()
+        assert not np.allclose(coeffs_a, coeffs_b)
 
 
 if __name__ == "__main__":

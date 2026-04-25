@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.model import PINN
 from src.mesh import GradedMesh, L1Coefficients
-from src.physics_integro import IntegroDifferentialResidual, BoundaryConditions, InitialCondition
+from src.physics_integro import IntegroDifferentialResidual
 
 
 def log_l1_discretization_points(epoch, data, mesh, l1_coeffs, l1_file, alpha):
@@ -137,8 +137,10 @@ class IntegroDiffDataset:
         self.N_boundary = disc['N_boundary']
         self.N_initial = disc['N_initial']
         self.alpha = prob['alpha']
+        self.x_min = prob.get('x_min', 0.0)
+        self.x_max = prob.get('x_max', 1.0)
         
-        self.x_grid = torch.linspace(0, 1, self.N_x, dtype=torch.float64, device=device)
+        self.x_grid = torch.linspace(self.x_min, self.x_max, self.N_x, dtype=torch.float64, device=device)
         self.t_grid = mesh.get_nodes()
         
         # Interior grid (exclude boundaries x=0,1 and t=0)
@@ -254,26 +256,27 @@ def get_cosine_warmup_scheduler(optimizer, warmup_epochs, total_epochs, min_lr):
     return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
 
 
-def compute_errors(model, alpha, device, N_x=100, N_t=100):
+def compute_errors(model, alpha, device, N_x=100, N_t=100, x_min=0.0, x_max=1.0, t_max=1.0, t_min=0.0):
     """Compute relative L2 and Linf errors against exact solution."""
     model.eval()
-    x = torch.linspace(0, 1, N_x, dtype=torch.float64, device=device)
-    t = torch.linspace(0.01, 1, N_t, dtype=torch.float64, device=device)  # Avoid t=0
+    x = torch.linspace(x_min, x_max, N_x, dtype=torch.float64, device=device)
+    t_start = max(t_min, 1e-10)
+    t = torch.linspace(t_start, t_max, N_t, dtype=torch.float64, device=device)
     X, T = torch.meshgrid(x, t, indexing='ij')
-    
+
     with torch.no_grad():
         u_pred = model(X.flatten(), T.flatten()).reshape(X.shape)
         u_exact = (T ** alpha) * torch.cos(np.pi * X)
-        
+
         error = torch.abs(u_pred - u_exact)
         l2_error = (torch.norm(error) / torch.norm(u_exact)).item()
         linf_error = torch.max(error).item()
-    
+
     model.train()
     return l2_error, linf_error
 
 
-def train(config_path, resume=False):
+def train(config_path, resume=False, early_stop_epoch=None):
     """Main training function."""
     # Load config
     with open(config_path, 'r') as f:
@@ -291,13 +294,17 @@ def train(config_path, resume=False):
     beta = prob['beta']
     N_x = disc['N_x']
     N_t = disc['N_t']
+    x_min = prob.get('x_min', 0.0)
+    x_max = prob.get('x_max', 1.0)
+    t_max = prob.get('t_max', 1.0)
+    mesh_grading = prob.get('mesh_grading', 2.0)
     
     print(f"Problem: alpha={alpha}, beta={beta}")
     print(f"Grid: {N_x}x{N_t}, Collocation points: {disc['N_collocation']}")
     
     # Create mesh and L1 coefficients
-    mesh = GradedMesh(N=N_t, t_max=prob['t_max'], beta=2.0, device=device)
-    l1_coeffs = L1Coefficients(mesh, alpha)
+    mesh = GradedMesh(N=N_t, t_max=t_max, beta=mesh_grading, device=device)
+    l1_coeffs = L1Coefficients(mesh, alpha, device=device)
     
     # Create model
     net_cfg = config['network']
@@ -344,6 +351,7 @@ def train(config_path, resume=False):
     
     # Point tracking
     if track_points:
+        Path(points_file).parent.mkdir(parents=True, exist_ok=True)
         with open(points_file, 'w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow(['epoch', 'point_idx', 'x', 't', 'n'])
@@ -351,6 +359,7 @@ def train(config_path, resume=False):
     
     # L1 discretization point tracking
     if track_l1_points:
+        Path(l1_points_file).parent.mkdir(parents=True, exist_ok=True)
         with open(l1_points_file, 'w') as f:
             f.write("L1 DISCRETIZATION SCHEME - POINT TRACKING LOG\n")
             f.write("=" * 80 + "\n\n")
@@ -387,12 +396,17 @@ def train(config_path, resume=False):
     print(f"Device: {device}")
     print(f"Epochs: {start_epoch} to {train_cfg['epochs']}")
     print(f"Checkpoints saved every {checkpoint_interval} epochs")
+    if early_stop_epoch is not None:
+        print(f"Early stopping target epoch: {early_stop_epoch}")
     print("=" * 60)
     
     start_time = time.time()
     pbar = tqdm(range(start_epoch, train_cfg['epochs'] + 1), desc="Training")
     
+    last_epoch = start_epoch - 1
+
     for epoch in pbar:
+        last_epoch = epoch
         model.train()
         data = dataset.get_training_data()
         
@@ -421,7 +435,15 @@ def train(config_path, resume=False):
         
         # Evaluation
         if epoch % eval_interval == 0 or epoch == 1:
-            l2_err, linf_err = compute_errors(model, alpha, device)
+            l2_err, linf_err = compute_errors(
+                model,
+                alpha,
+                device,
+                x_min=x_min,
+                x_max=x_max,
+                t_max=t_max,
+                t_min=0.0,
+            )
             history['loss'].append(losses['total'].item())
             history['l2'].append(l2_err)
             history['linf'].append(linf_err)
@@ -450,6 +472,10 @@ def train(config_path, resume=False):
                 'config': config
             }, checkpoint_dir / 'latest_checkpoint.pt')
             print(f">>> Checkpoint saved at epoch {epoch}")
+
+        if early_stop_epoch is not None and epoch >= early_stop_epoch:
+            print(f"\n>>> Early stopping triggered at epoch {epoch}")
+            break
         
         pbar.set_postfix({'Loss': f'{losses["total"].item():.2e}', 
                           'LR': f'{optimizer.param_groups[0]["lr"]:.2e}'})
@@ -458,7 +484,15 @@ def train(config_path, resume=False):
     print("=" * 60)
     print(f"Adam Training Complete! Time: {adam_time:.1f} minutes")
     
-    l2_err, linf_err = compute_errors(model, alpha, device)
+    l2_err, linf_err = compute_errors(
+        model,
+        alpha,
+        device,
+        x_min=x_min,
+        x_max=x_max,
+        t_max=t_max,
+        t_min=0.0,
+    )
     print(f"L2 Error after Adam: {l2_err:.6e}")
     print(f"Linf Error after Adam: {linf_err:.6e}")
     print("=" * 60)
@@ -493,7 +527,15 @@ def train(config_path, resume=False):
             loss = lbfgs_optimizer.step(closure)
             
             if epoch % 100 == 0:
-                l2_err, linf_err = compute_errors(model, alpha, device)
+                l2_err, linf_err = compute_errors(
+                    model,
+                    alpha,
+                    device,
+                    x_min=x_min,
+                    x_max=x_max,
+                    t_max=t_max,
+                    t_min=0.0,
+                )
                 print(f"\nL-BFGS Epoch {epoch}: Loss={loss.item():.4e}, "
                       f"L2={l2_err:.4e}, Linf={linf_err:.4e}")
             
@@ -502,14 +544,22 @@ def train(config_path, resume=False):
         print("L-BFGS Fine-tuning Complete!")
     
     # Final evaluation and save
-    l2_err, linf_err = compute_errors(model, alpha, device)
+    l2_err, linf_err = compute_errors(
+        model,
+        alpha,
+        device,
+        x_min=x_min,
+        x_max=x_max,
+        t_max=t_max,
+        t_min=0.0,
+    )
     print("=" * 60)
     print(f"Final L2 Error: {l2_err:.6e}")
     print(f"Final Linf Error: {linf_err:.6e}")
     print("=" * 60)
     
     torch.save({
-        'epoch': train_cfg['epochs'],
+        'epoch': last_epoch,
         'model_state_dict': model.state_dict(),
         'history': history,
         'config': config,
@@ -710,6 +760,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, default='configs/integro_differential.yaml')
     parser.add_argument('--resume', action='store_true')
+    parser.add_argument('--early-stop-epoch', type=int, default=None)
     args = parser.parse_args()
     
-    train(args.config, args.resume)
+    train(args.config, args.resume, args.early_stop_epoch)

@@ -509,13 +509,32 @@ $$\mathcal{L}_{IC} = \frac{1}{N_{IC}} \sum |u(x,0)|^2$$
 ### Training
 
 ```bash
-cd /workspace/f20220519/PINNs
+cd /path/to/PINNs
 
 # Train from scratch
 python scripts/train_integro_diff.py --config configs/integro_differential.yaml
 
 # Resume from checkpoint
 python scripts/train_integro_diff.py --config configs/integro_differential.yaml --resume
+
+# Optional: stop early at a target epoch
+python scripts/train_integro_diff.py --config configs/integro_differential.yaml --early-stop-epoch 17500
+```
+
+### Evaluation and Visualization
+
+```bash
+# Evaluate a checkpoint and save metrics/plots
+python scripts/evaluate.py \
+  --checkpoint outputs/checkpoints_integro_diff/final_model.pt \
+  --config configs/integro_differential.yaml \
+  --output-dir outputs/eval
+
+# Generate standard visualization panels
+python scripts/visualize.py \
+  --checkpoint outputs/checkpoints_integro_diff/final_model.pt \
+  --config configs/integro_differential.yaml \
+  --output-dir outputs/figures
 ```
 
 ### Output Files
@@ -548,6 +567,158 @@ k     Time Index      t_value         Coefficient          Role
 3     n=2             0.00040000      (d-d)=1.54321098     History u^2
 4     n=1             0.00010000      (d-d)=1.23456789     History u^1
 ```
+
+---
+
+## Quantum Readiness and QPINN Roadmap
+
+This branch has been refactored to be **quantum-ready** while keeping the solver fully classical today.
+No quantum layers are implemented yet; instead, the codebase now has cleaner interfaces and more reliable scripts/tests to support a controlled QPINN transition.
+
+### Why This Problem Is a Good QPINN Candidate
+
+The target PDE combines three structures that are relevant for quantum-hybrid research:
+
+1. **Strong nonlocality in time** from the Caputo derivative (full memory effect).
+2. **Weakly singular Volterra kernel** in the integral term.
+3. **Smooth low-dimensional input space** $(x,t)$, where variational quantum feature maps are feasible.
+
+This is a stronger benchmark than toy ODE/PDE QPINN tasks and can support publishable claims if evaluated rigorously.
+
+### Current Integration Points for a Future Quantum Model
+
+The following software seams make QPINN integration straightforward:
+
+1. `PINN.forward(x, t)` is already a clean model contract.
+2. Residual code consumes only model outputs and autograd derivatives.
+3. Training scripts construct models via config, so a future `model_type` switch can route to classical or quantum-hybrid backends.
+
+Recommended future model interface:
+
+```python
+u = model(x, t)
+```
+
+Keep this unchanged for compatibility with:
+
+- L1 fractional derivative logic
+- Product-integration integral logic
+- existing checkpoint/evaluation tooling
+
+### Practical QPINN Strategy (Recommended)
+
+Use a **hybrid QPINN**, not a fully quantum network:
+
+1. Classical encoder: maps $(x,t)$ to a compact latent.
+2. Small variational quantum block: few qubits, shallow depth.
+3. Classical readout head: scalar output $u(x,t)$.
+
+Why hybrid first:
+
+1. This project already has expensive history loops from L1 + integral terms.
+2. Full quantum replacement would be too slow/noisy for meaningful ablations.
+3. Hybrid keeps gradients and training stability manageable.
+
+### Suggested Implementation Phases
+
+#### Phase 1: Interface and Config Plumbing
+
+Add config keys:
+
+```yaml
+network:
+  model_type: classical   # classical | hybrid_quantum
+  quantum:
+   backend: pennylane
+   n_qubits: 4
+   n_layers: 2
+   shots: null           # null for analytic simulator, integer for sampling
+```
+
+Add a model factory to instantiate either classical PINN or hybrid QPINN with identical forward signature.
+
+#### Phase 2: Small-Scale Feasibility Study
+
+Use reduced settings (for turnaround and fair debugging):
+
+- `N_x=40`, `N_t=40`
+- fewer collocation points
+- short training budget
+
+Goal: verify stable training and derivative correctness (especially $u_{xx}$).
+
+#### Phase 3: Controlled Benchmarking
+
+Run matched-budget experiments:
+
+1. Equal wall-clock time.
+2. Equal parameter count (approximately).
+3. Equal seeds and evaluation grids.
+
+Track:
+
+- L2 relative error
+- Linf error
+- convergence speed
+- training energy/runtime cost
+- robustness across seeds
+
+#### Phase 4: Full-Problem Transfer
+
+Warm-start from classical checkpoints, then quantum fine-tune.
+This is the most practical path for the current 200×200 setup.
+
+### Expected Quantum Benefits (Realistic)
+
+Potential advantages (if validated experimentally):
+
+1. Better representation of oscillatory/nonlocal patterns at small model width.
+2. Improved worst-case error in specific regimes (possible Linf gains).
+3. Better parameter efficiency in low-dimensional PDE input settings.
+
+Potential non-benefits / risks:
+
+1. Slower training from repeated circuit evaluations inside history loops.
+2. Gradient variance/noise with shot-based sampling.
+3. No guaranteed accuracy gain over strong classical baselines.
+
+The publication value will come from **honest ablations**, not from claiming universal quantum superiority.
+
+### Publication Scope and Opportunities
+
+This project can support multiple publication angles:
+
+1. **Quantum-Enhanced Fractional PINNs**
+  - Hybrid QPINN for time-fractional integro-differential equations.
+  - Focus on nonlocal memory operators and singular kernels.
+
+2. **Numerics + Quantum Hybridization**
+  - Interaction between graded meshes/L1 discretization and quantum feature maps.
+  - Error/stability analysis under matched compute budgets.
+
+3. **Benchmarking Study**
+  - Reproducible classical vs hybrid quantum PINN benchmark on a nontrivial fractional PDE.
+  - Strong emphasis on fairness and reproducibility.
+
+High-impact publication checklist:
+
+1. At least 3-5 random seeds per setting.
+2. Wall-clock, memory, and energy reporting.
+3. Sensitivity studies: qubits, depth, shots, optimizer.
+4. Error maps and late-time slice analysis (already natural in this repo).
+5. Open-source reproducible pipeline with exact configs/checkpoints.
+
+### What Was Improved Now (Pre-Quantum Refactor)
+
+The codebase now includes practical upgrades that reduce risk before adding quantum layers:
+
+1. Training script supports configurable domain bounds and mesh grading consistently.
+2. Early-stopping CLI support is implemented.
+3. Evaluation and visualization scripts are repaired for current config/checkpoint formats.
+4. Mesh/L1 test suite is updated to the live API.
+5. Notebook analysis flow is aligned with current branch artifacts.
+
+These changes are intentionally quantum-agnostic so the next quantum step can focus on model research rather than infrastructure cleanup.
 
 ---
 

@@ -1,129 +1,220 @@
 #!/usr/bin/env python3
-"""Evaluation script for trained PINN model."""
+"""Evaluation script for trained PINN checkpoints."""
 
 import argparse
-import yaml
-import torch
-import numpy as np
+import json
 from pathlib import Path
 import sys
 
-# Add src to path
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+import yaml
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.model import PINN
-from src.dataset import create_test_grid
-from src.utils import (
-    exact_solution_example,
-    compute_errors,
-    plot_comparison,
-    plot_training_history,
-)
+
+
+def exact_solution(x, t, alpha, problem_type):
+    """Return the exact solution associated with the configured problem."""
+    if problem_type == "integro_differential":
+        return (t ** alpha) * torch.cos(np.pi * x)
+    return (t ** alpha) * torch.sin(np.pi * x)
+
+
+def compute_error_metrics(u_pred, u_exact, t_mesh):
+    """Compute relative L2 and Linf errors while excluding t=0."""
+    mask = t_mesh > 1e-10
+    pred = u_pred[mask]
+    exact = u_exact[mask]
+    diff = pred - exact
+
+    l2_rel = torch.norm(diff) / torch.norm(exact)
+    linf = torch.max(torch.abs(diff))
+    mean_abs = torch.mean(torch.abs(diff))
+
+    return {
+        "l2_relative": l2_rel.item(),
+        "linf": linf.item(),
+        "mean_absolute": mean_abs.item(),
+    }
+
+
+def plot_solution_comparison(x_mesh, t_mesh, u_pred, u_exact, output_path):
+    """Plot exact/predicted/error fields."""
+    error = torch.abs(u_pred - u_exact)
+
+    X = x_mesh.cpu().numpy()
+    T = t_mesh.cpu().numpy()
+    pred = u_pred.cpu().numpy()
+    exact = u_exact.cpu().numpy()
+    err = error.cpu().numpy()
+
+    fig, axes = plt.subplots(1, 3, figsize=(16, 4))
+
+    im0 = axes[0].pcolormesh(X, T, exact, cmap="viridis", shading="auto")
+    axes[0].set_title("Exact")
+    axes[0].set_xlabel("x")
+    axes[0].set_ylabel("t")
+    plt.colorbar(im0, ax=axes[0])
+
+    im1 = axes[1].pcolormesh(X, T, pred, cmap="viridis", shading="auto")
+    axes[1].set_title("Predicted")
+    axes[1].set_xlabel("x")
+    axes[1].set_ylabel("t")
+    plt.colorbar(im1, ax=axes[1])
+
+    im2 = axes[2].pcolormesh(X, T, err, cmap="hot", shading="auto")
+    axes[2].set_title(f"Absolute Error (max={err.max():.3e})")
+    axes[2].set_xlabel("x")
+    axes[2].set_ylabel("t")
+    plt.colorbar(im2, ax=axes[2])
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150)
+    plt.close()
+
+
+def plot_training_history(checkpoint, output_path):
+    """Plot available training history from checkpoint formats used in this repo."""
+    history = checkpoint.get("history", {})
+
+    if history.get("epochs") and history.get("l2") and history.get("linf"):
+        epochs = history["epochs"]
+        l2_vals = history["l2"]
+        linf_vals = history["linf"]
+        loss_vals = history.get("loss", [])
+
+        fig, axes = plt.subplots(1, 3, figsize=(16, 4))
+
+        if loss_vals:
+            axes[0].semilogy(epochs, loss_vals, "b-")
+        axes[0].set_title("Loss")
+        axes[0].set_xlabel("Epoch")
+        axes[0].grid(True, alpha=0.3)
+
+        axes[1].semilogy(epochs, l2_vals, "g-")
+        axes[1].set_title("L2 Relative Error")
+        axes[1].set_xlabel("Epoch")
+        axes[1].grid(True, alpha=0.3)
+
+        axes[2].semilogy(epochs, linf_vals, "r-")
+        axes[2].set_title("Linf Error")
+        axes[2].set_xlabel("Epoch")
+        axes[2].grid(True, alpha=0.3)
+
+        plt.tight_layout()
+        plt.savefig(output_path, dpi=150)
+        plt.close()
+        return
+
+    loss_history = checkpoint.get("loss_history")
+    error_history = checkpoint.get("error_history")
+    eval_epochs = checkpoint.get("eval_epochs", [])
+
+    if not loss_history or not error_history or not eval_epochs:
+        return
+
+    fig, axes = plt.subplots(1, 3, figsize=(16, 4))
+    axes[0].semilogy(loss_history.get("total", []), "b-")
+    axes[0].set_title("Loss")
+    axes[0].set_xlabel("Step")
+    axes[0].grid(True, alpha=0.3)
+
+    axes[1].semilogy(eval_epochs, error_history.get("l2", []), "g-")
+    axes[1].set_title("L2 Relative Error")
+    axes[1].set_xlabel("Epoch")
+    axes[1].grid(True, alpha=0.3)
+
+    axes[2].semilogy(eval_epochs, error_history.get("linf", []), "r-")
+    axes[2].set_title("Linf Error")
+    axes[2].set_xlabel("Epoch")
+    axes[2].grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=150)
+    plt.close()
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Evaluate a trained PINN checkpoint")
+    parser.add_argument("--checkpoint", type=str, required=True, help="Path to checkpoint file")
+    parser.add_argument("--config", type=str, default="configs/integro_differential.yaml", help="Path to YAML config")
+    parser.add_argument("--output-dir", type=str, default="outputs/eval", help="Output directory")
+    parser.add_argument("--n-test", type=int, default=100, help="Grid resolution per dimension")
+    parser.add_argument("--device", type=str, default="auto", choices=["auto", "cpu", "cuda"], help="Evaluation device")
+    return parser.parse_args()
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Evaluate trained PINN")
-    parser.add_argument(
-        "--checkpoint",
-        type=str,
-        required=True,
-        help="Path to model checkpoint",
-    )
-    parser.add_argument(
-        "--config",
-        type=str,
-        default="configs/default.yaml",
-        help="Path to config file",
-    )
-    parser.add_argument(
-        "--output_dir",
-        type=str,
-        default="outputs/figures",
-        help="Directory to save figures",
-    )
-    parser.add_argument(
-        "--n_test",
-        type=int,
-        default=100,
-        help="Number of test points per dimension",
-    )
-    args = parser.parse_args()
+    args = parse_args()
 
-    # Load config
     with open(args.config, "r") as f:
         config = yaml.safe_load(f)
 
-    # Set device
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    if args.device == "auto":
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+    else:
+        device = args.device
+        if device == "cuda" and not torch.cuda.is_available():
+            raise RuntimeError("CUDA requested but not available")
+
     print(f"Using device: {device}")
 
-    # Problem parameters
-    problem_cfg = config.get("problem", {})
-    alpha = problem_cfg.get("alpha", 0.5)
-    T = problem_cfg.get("T", 1.0)
-    x_min = problem_cfg.get("x_min", 0.0)
-    x_max = problem_cfg.get("x_max", 1.0)
+    problem = config.get("problem", {})
+    problem_type = problem.get("type", "fractional")
+    alpha = problem.get("alpha", 0.5)
+    x_min = problem.get("x_min", 0.0)
+    x_max = problem.get("x_max", 1.0)
+    t_max = problem.get("t_max", 1.0)
 
-    # Create model
-    model_cfg = config.get("model", {})
+    net_cfg = config.get("network", config.get("model", {}))
     model = PINN(
-        input_dim=model_cfg.get("input_dim", 2),
-        output_dim=model_cfg.get("output_dim", 1),
-        hidden_layers=model_cfg.get("hidden_layers", [64, 64, 64]),
-        activation=model_cfg.get("activation", "tanh"),
-    ).to(device)
-
-    # Load checkpoint
-    checkpoint = torch.load(args.checkpoint, map_location=device)
-    model.load_state_dict(checkpoint["model_state_dict"])
-    model.eval()
-    print(f"Loaded checkpoint from epoch {checkpoint['epoch']}")
-
-    # Create test grid
-    t_grid, x_grid, T_mesh, X_mesh = create_test_grid(
-        t_range=(0.0, T),
-        x_range=(x_min, x_max),
-        N_t=args.n_test,
-        N_x=args.n_test,
+        input_dim=net_cfg.get("input_dim", 2),
+        output_dim=net_cfg.get("output_dim", 1),
+        hidden_layers=net_cfg.get("hidden_layers", [64, 64, 64, 64]),
+        activation=net_cfg.get("activation", "tanh"),
         device=device,
     )
 
-    # Predict
+    checkpoint = torch.load(args.checkpoint, map_location=device)
+    model.load_state_dict(checkpoint["model_state_dict"])
+    model.eval()
+
+    epoch = checkpoint.get("epoch", "unknown")
+    print(f"Loaded checkpoint epoch: {epoch}")
+
+    x = torch.linspace(x_min, x_max, args.n_test, dtype=torch.float64, device=device)
+    t = torch.linspace(0.0, t_max, args.n_test, dtype=torch.float64, device=device)
+    x_mesh, t_mesh = torch.meshgrid(x, t, indexing="ij")
+
     with torch.no_grad():
-        u_pred = model(t_grid, x_grid)
-        u_pred = u_pred.reshape(args.n_test, args.n_test)
+        u_pred = model(x_mesh.flatten(), t_mesh.flatten()).reshape(x_mesh.shape)
 
-    # Compute exact solution (if available)
-    u_exact = exact_solution_example(T_mesh, X_mesh, alpha)
+    u_exact = exact_solution(x_mesh, t_mesh, alpha, problem_type)
+    metrics = compute_error_metrics(u_pred, u_exact, t_mesh)
 
-    # Compute errors
-    errors = compute_errors(u_pred, u_exact)
-    print("\nError Metrics:")
-    for name, value in errors.items():
+    print("\nError metrics:")
+    for name, value in metrics.items():
         print(f"  {name}: {value:.6e}")
 
-    # Create output directory
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Plot comparison
-    plot_comparison(
-        T_mesh,
-        X_mesh,
+    plot_solution_comparison(
+        x_mesh,
+        t_mesh,
         u_pred,
         u_exact,
-        save_path=output_dir / "solution_comparison.png",
+        output_dir / "solution_comparison.png",
     )
+    plot_training_history(checkpoint, output_dir / "training_history.png")
 
-    # Plot training history if available
-    history_path = Path(args.checkpoint).parent.parent / "logs" / "training_history.json"
-    if history_path.exists():
-        import json
-        with open(history_path, "r") as f:
-            history = json.load(f)
-        plot_training_history(history, save_path=output_dir / "training_history.png")
+    with open(output_dir / "metrics.json", "w") as f:
+        json.dump(metrics, f, indent=2)
 
-    print(f"\nFigures saved to {output_dir}")
+    print(f"\nSaved outputs to: {output_dir}")
 
 
 if __name__ == "__main__":

@@ -50,6 +50,9 @@ class Trainer:
         
         prob_config = config.get('problem', {})
         self.alpha = prob_config.get('alpha', 0.5)
+        self.x_min = prob_config.get('x_min', 0.0)
+        self.x_max = prob_config.get('x_max', 1.0)
+        self.t_max = prob_config.get('t_max', 1.0)
         
         disc_config = config.get('discretization', {})
         self.N_x = disc_config.get('N_x', 100)
@@ -98,8 +101,8 @@ class Trainer:
     
     def evaluate(self):
         """Evaluate model errors."""
-        x = torch.linspace(0, 1, self.N_x, dtype=torch.float64, device=self.device)
-        t = torch.linspace(0, 1, self.N_t + 1, dtype=torch.float64, device=self.device)
+        x = torch.linspace(self.x_min, self.x_max, self.N_x, dtype=torch.float64, device=self.device)
+        t = torch.linspace(0, self.t_max, self.N_t + 1, dtype=torch.float64, device=self.device)
         X, T = torch.meshgrid(x, t, indexing='ij')
         return compute_errors(self.model, X.flatten(), T.flatten(), self.alpha, self.device)
     

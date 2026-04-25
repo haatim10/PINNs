@@ -383,17 +383,18 @@ class IntegralConvergenceMonitor:
         Approximate the integral using refined product integration 
         (finer mesh as reference).
         
-        For now, uses the current integral computation as reference.
-        In production, could use Richardson extrapolation or finer mesh.
+        Uses the alternative quadrature-based routine as a reference estimate.
         """
-        return self.residual.compute_integral_term(x, t, n_indices)
+        with torch.no_grad():
+            return self.residual.compute_integral_term_quadrature(x, t, n_indices)
     
     def log_convergence(self, epoch: int, x_test: torch.Tensor, t_test: torch.Tensor,
                        n_test: torch.Tensor, log_file: str = None):
         """Log integral convergence metrics to file."""
+        reference = self.compute_reference_integral(x_test, t_test, n_test)
         metrics = self.residual.evaluate_integral_convergence(
             x_test, t_test, n_test, 
-            exact_integral=torch.zeros_like(t_test)  # Placeholder
+            exact_integral=reference
         )
         
         self.history['epoch'].append(epoch)
