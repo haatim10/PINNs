@@ -14,7 +14,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.model import PINN
+from src.model_factory import build_model
 
 
 def analyze_checkpoint_history(checkpoint_dir):
@@ -274,13 +274,7 @@ def main():
     # Load model
     print(f"\nLoading model from epoch {checkpoint['epoch']}...")
     net_cfg = config['network']
-    model = PINN(
-        input_dim=net_cfg['input_dim'],
-        output_dim=net_cfg['output_dim'],
-        hidden_layers=net_cfg['hidden_layers'],
-        activation=net_cfg['activation'],
-        device=device
-    )
+    model = build_model(net_cfg, device=device)
     model.load_state_dict(checkpoint['model_state_dict'])
     model = model.to(device)
     

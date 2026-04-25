@@ -25,10 +25,18 @@ discretization:
   N_integral_quad: 15 # Quadrature points for integral approximation
 
 network:
+  model_type: classical
   input_dim: 2
   output_dim: 1
   hidden_layers: [64, 64, 64, 64]
   activation: tanh            # Note: trained with tanh (mexican_hat now available for future runs)
+  quantum:
+    backend: classical_emulator
+    n_qubits: 8
+    n_layers: 3
+    feature_scale: 1.0
+    entanglement_strength: 0.15
+    residual_connection: true
 
 training:
   epochs: 20000
@@ -60,3 +68,6 @@ logging:
 paths:
   checkpoint_dir: outputs/checkpoints_integro_diff
   results_dir: outputs/integro_diff_results
+
+device: cuda
+seed: 42

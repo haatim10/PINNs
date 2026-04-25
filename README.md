@@ -521,6 +521,26 @@ python scripts/train_integro_diff.py --config configs/integro_differential.yaml 
 python scripts/train_integro_diff.py --config configs/integro_differential.yaml --early-stop-epoch 17500
 ```
 
+### Model Selection (Classical vs Quantum-Ready)
+
+Model instantiation is now config-driven via `src/model_factory.py`.
+
+In `network` config blocks, set:
+
+```yaml
+network:
+  model_type: classical       # classical | quantum_ready | hybrid_quantum
+  quantum:
+    backend: classical_emulator
+    n_qubits: 8
+    n_layers: 3
+    feature_scale: 1.0
+    entanglement_strength: 0.15
+    residual_connection: true
+```
+
+This keeps a single forward contract (`u = model(x, t)`) while allowing side-by-side experiments.
+
 ### Evaluation and Visualization
 
 ```bash
@@ -536,6 +556,25 @@ python scripts/visualize.py \
   --config configs/integro_differential.yaml \
   --output-dir outputs/figures
 ```
+
+### Benchmarking Classical vs Quantum-Ready
+
+Use the benchmark runner to compare matched-budget runs:
+
+```bash
+python scripts/benchmark_quantum_ready.py \
+  --config configs/benchmark_quantum_ready.yaml \
+  --models classical quantum_ready \
+  --seeds 42 123 999 \
+  --epochs 8 \
+  --output-dir outputs/benchmarks/quantum_ready
+```
+
+Outputs include:
+- `benchmark_summary.csv`
+- `benchmark_results.json`
+- `benchmark_aggregate.json`
+- `convergence_seed_<seed>.png`
 
 ### Output Files
 
@@ -572,8 +611,9 @@ k     Time Index      t_value         Coefficient          Role
 
 ## Quantum Readiness and QPINN Roadmap
 
-This branch has been refactored to be **quantum-ready** while keeping the solver fully classical today.
-No quantum layers are implemented yet; instead, the codebase now has cleaner interfaces and more reliable scripts/tests to support a controlled QPINN transition.
+This branch has been refactored to be **quantum-ready** while keeping training fully classical by default.
+The current `quantum_ready` path uses a classical emulator block (`QuantumReadyPINN`) with the same PINN API.
+No real quantum hardware/circuit backend is integrated yet; this is intentional to establish stable benchmarking infrastructure first.
 
 ### Why This Problem Is a Good QPINN Candidate
 
@@ -591,7 +631,8 @@ The following software seams make QPINN integration straightforward:
 
 1. `PINN.forward(x, t)` is already a clean model contract.
 2. Residual code consumes only model outputs and autograd derivatives.
-3. Training scripts construct models via config, so a future `model_type` switch can route to classical or quantum-hybrid backends.
+3. Training/evaluation/visualization scripts now construct models via `src/model_factory.py`.
+4. Config-driven `network.model_type` supports `classical`, `quantum_ready`, and `hybrid_quantum` aliasing.
 
 Recommended future model interface:
 
@@ -710,13 +751,15 @@ High-impact publication checklist:
 
 ### What Was Improved Now (Pre-Quantum Refactor)
 
-The codebase now includes practical upgrades that reduce risk before adding quantum layers:
+The codebase now includes practical upgrades that reduce risk before adding true quantum layers:
 
 1. Training script supports configurable domain bounds and mesh grading consistently.
 2. Early-stopping CLI support is implemented.
 3. Evaluation and visualization scripts are repaired for current config/checkpoint formats.
 4. Mesh/L1 test suite is updated to the live API.
 5. Notebook analysis flow is aligned with current branch artifacts.
+6. `src/model_factory.py` + `src/quantum_ready_model.py` provide a quantum-ready extension path without changing PDE residual code.
+7. `scripts/benchmark_quantum_ready.py` + `configs/benchmark_quantum_ready.yaml` provide reproducible comparison tooling.
 
 These changes are intentionally quantum-agnostic so the next quantum step can focus on model research rather than infrastructure cleanup.
 
@@ -727,14 +770,18 @@ These changes are intentionally quantum-agnostic so the next quantum step can fo
 ```
 PINNs/
 ├── configs/
-│   └── integro_differential.yaml        # Training configuration
+│   ├── integro_differential.yaml        # Main training configuration
+│   └── benchmark_quantum_ready.yaml     # Benchmark configuration (classical vs quantum-ready)
 ├── src/
 │   ├── model.py                         # PINN architecture (Tanh / Mexican Hat)
+│   ├── model_factory.py                 # Config-based model construction
+│   ├── quantum_ready_model.py           # Classical-emulated quantum-ready hybrid block
 │   ├── mesh.py                          # Graded mesh + L1 coefficients
 │   ├── physics_integro.py               # PDE residual computation
 │   └── ...
 ├── scripts/
 │   ├── train_integro_diff.py            # Training script
+│   ├── benchmark_quantum_ready.py       # Matched-budget benchmark runner
 │   ├── early_stopping_results.py        # Best-epoch analysis
 │   ├── early_stopping_comparison.py     # Side-by-side epoch comparison
 │   └── early_stopping_recommendation.py # Optimal stopping recommendation

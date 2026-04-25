@@ -15,10 +15,18 @@ discretization:
   N_initial: 50
 
 network:
+  model_type: classical
   input_dim: 2
   output_dim: 1
   hidden_layers: [64, 64, 64, 64]
   activation: tanh
+  quantum:
+    backend: classical_emulator
+    n_qubits: 6
+    n_layers: 2
+    feature_scale: 1.0
+    entanglement_strength: 0.15
+    residual_connection: true
 
 training:
   epochs: 10000

@@ -25,9 +25,18 @@ import os
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.model import PINN
+from src.model_factory import build_model, model_name_from_config
 from src.mesh import GradedMesh, L1Coefficients
 from src.physics_integro import IntegroDifferentialResidual
+
+
+def set_seed(seed: int):
+    """Set random seeds for reproducible benchmarking/training."""
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
 
 
 def log_l1_discretization_points(epoch, data, mesh, l1_coeffs, l1_file, alpha):
@@ -276,13 +285,20 @@ def compute_errors(model, alpha, device, N_x=100, N_t=100, x_min=0.0, x_max=1.0,
     return l2_error, linf_error
 
 
-def train(config_path, resume=False, early_stop_epoch=None):
+def train(config_path, resume=False, early_stop_epoch=None, generate_artifacts=True):
     """Main training function."""
     # Load config
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
+
+    seed = int(config.get('seed', 42))
+    set_seed(seed)
     
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    requested_device = str(config.get('device', 'cuda')).lower()
+    if requested_device == 'cuda' and torch.cuda.is_available():
+        device = 'cuda'
+    else:
+        device = 'cpu'
     print(f"Using device: {device}")
     
     prob = config['problem']
@@ -308,13 +324,9 @@ def train(config_path, resume=False, early_stop_epoch=None):
     
     # Create model
     net_cfg = config['network']
-    model = PINN(
-        input_dim=net_cfg['input_dim'],
-        output_dim=net_cfg['output_dim'],
-        hidden_layers=net_cfg['hidden_layers'],
-        activation=net_cfg['activation'],
-        device=device
-    )
+    model = build_model(net_cfg, device=device)
+    model_type = model_name_from_config(net_cfg)
+    print(f"Model type: {model_type}")
     print(f"Model parameters: {sum(p.numel() for p in model.parameters())}")
     
     # Create dataset and loss
@@ -568,9 +580,10 @@ def train(config_path, resume=False, early_stop_epoch=None):
     }, checkpoint_dir / 'final_model.pt')
     
     # Generate plots
-    print("\nGenerating output plots...")
-    generate_plots(model, alpha, history, results_dir, device)
-    print(f"Plots saved to {results_dir}")
+    if generate_artifacts:
+        print("\nGenerating output plots...")
+        generate_plots(model, alpha, history, results_dir, device)
+        print(f"Plots saved to {results_dir}")
     
     return model, history
 

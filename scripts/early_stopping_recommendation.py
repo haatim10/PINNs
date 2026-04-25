@@ -12,8 +12,6 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.model import PINN
-
 
 def analyze_all_checkpoints(checkpoint_dir):
     """Extract error metrics from all checkpoints.

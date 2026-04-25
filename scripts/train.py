@@ -10,7 +10,7 @@ import torch
 from pathlib import Path
 
 from src.mesh import GradedMesh, L1Coefficients
-from src.model import PINN
+from src.model_factory import build_model
 from src.dataset import CollocationDataset
 from src.loss import PIFMILoss
 from src.trainer import Trainer
@@ -53,11 +53,7 @@ def main():
     l1_coeffs = L1Coefficients(mesh, alpha, device=device)
     
     net = config.get('network', {})
-    model = PINN(
-        hidden_layers=net.get('hidden_layers', [64, 64, 64, 64]),
-        activation=net.get('activation', 'tanh'),
-        device=device
-    )
+    model = build_model(net, device=device)
     print(f"Model parameters: {model.count_parameters()}")
     
     dataset = CollocationDataset(

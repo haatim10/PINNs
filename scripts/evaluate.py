@@ -13,7 +13,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.model import PINN
+from src.model_factory import build_model, model_name_from_config
 
 
 def exact_solution(x, t, alpha, problem_type):
@@ -170,13 +170,8 @@ def main():
     t_max = problem.get("t_max", 1.0)
 
     net_cfg = config.get("network", config.get("model", {}))
-    model = PINN(
-        input_dim=net_cfg.get("input_dim", 2),
-        output_dim=net_cfg.get("output_dim", 1),
-        hidden_layers=net_cfg.get("hidden_layers", [64, 64, 64, 64]),
-        activation=net_cfg.get("activation", "tanh"),
-        device=device,
-    )
+    model = build_model(net_cfg, device=device)
+    print(f"Model type: {model_name_from_config(net_cfg)}")
 
     checkpoint = torch.load(args.checkpoint, map_location=device)
     model.load_state_dict(checkpoint["model_state_dict"])

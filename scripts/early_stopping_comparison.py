@@ -13,7 +13,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.model import PINN
+from src.model_factory import build_model
 
 
 def compute_errors(model, alpha, device, N_x=100, N_t=100):
@@ -39,13 +39,7 @@ def load_and_eval_model(checkpoint_path, config, device):
     checkpoint = torch.load(checkpoint_path, weights_only=False, map_location=device)
     
     net_cfg = config['network']
-    model = PINN(
-        input_dim=net_cfg['input_dim'],
-        output_dim=net_cfg['output_dim'],
-        hidden_layers=net_cfg['hidden_layers'],
-        activation=net_cfg['activation'],
-        device=device
-    )
+    model = build_model(net_cfg, device=device)
     model.load_state_dict(checkpoint['model_state_dict'])
     model = model.to(device)
     
