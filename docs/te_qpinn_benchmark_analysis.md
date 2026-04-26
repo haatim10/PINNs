@@ -1,108 +1,90 @@
-# TE-QPINN Benchmark Analysis (Phase 5)
+# TE-QPINN Benchmark Analysis (Phase 6D)
 
 ## 1. Purpose
 
-This document summarizes the finalized Phase 5 benchmark interpretation for the TE-QPINN-inspired surrogate on the `50x50` single-seed run.
+This document updates the TE-QPINN benchmark interpretation using both:
 
-Goals:
-- record exact final metrics,
-- compare Classical + PI vs TE-QPINN Surrogate + PI under the same Adam-only budget,
-- document what is promising vs still preliminary,
-- define next experiments.
+- the earlier single-seed `50x50` run (seed 42), and
+- the completed multi-seed validation (seeds `0..4`) from:
+  - `outputs/benchmarks/te_qpinn_multiseed`
+  - `outputs/plots/te_qpinn_multiseed`
 
-## 2. Benchmark setup
+The objective is to report results honestly and determine whether the earlier single-seed gain generalizes.
 
-- Benchmark plan: `configs/benchmark_te_qpinn_50.yaml`
-- Seed(s): `42` (single-seed run)
-- Problem type: time-fractional integro-differential (PI path active)
+## 2. Benchmark protocol
+
+- PDE: time-fractional integro-differential equation (same PI formulation for all runs)
 - Grid: `50 x 50`
-- Training budget: Adam-only, `12` epochs for both compared models
-- Deterministic sampling: enabled
-- Artifacts:
-  - `outputs/benchmarks/te_qpinn_50/summary.csv`
-  - `outputs/benchmarks/te_qpinn_50/summary.json`
-  - `outputs/benchmarks/te_qpinn_50/benchmark_report.md`
-  - `outputs/plots/te_qpinn_50/convergence_seed_42.png`
-  - `outputs/plots/te_qpinn_50/summary_panels.png`
+- Training budget: Adam-only, `12` epochs
+- Compared models:
+  1. Classical + PI (`configs/benchmark_te_qpinn_50_classical_pi.yaml`)
+  2. TE-QPINN Surrogate + PI (`configs/benchmark_te_qpinn_50_surrogate_pi.yaml`)
+- Multi-seed plan: `configs/benchmark_te_qpinn_multiseed.yaml` with seeds `[0,1,2,3,4]`
 
-## 3. Models compared
+## 3. Single-seed recap (seed 42)
 
-1. Classical + PI
-   - Model type: `classical`
-   - Config: `configs/benchmark_te_qpinn_50_classical_pi.yaml`
-
-2. TE-QPINN Surrogate + PI (tuned)
-   - Model type: `te_qpinn_surrogate`
-   - Config: `configs/benchmark_te_qpinn_50_surrogate_pi.yaml`
-   - Tuned for near-matched parameter count and improved convergence.
-
-## 4. Final 50x50 single-seed results
+Earlier seed-42 results showed TE-QPINN improvement:
 
 | Variant | Params | Runtime (s) | Final Loss | Final L2 | Final Linf |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Classical + PI | 2241 | 16.41 | 62.2103 | 1.00381 | 1.08578 |
 | TE-QPINN Surrogate + PI | 2306 | 43.83 | 71.4435 | 0.88684 | 0.94618 |
 
-## 5. Accuracy comparison
+This looked promising but required multi-seed validation before drawing stronger conclusions.
 
-Under the same Adam-only 12-epoch budget:
-- TE-QPINN Surrogate + PI achieved lower error than Classical + PI on both metrics:
-  - L2: `0.88684` vs `1.00381`
-  - Linf: `0.94618` vs `1.08578`
-- Final training loss is higher for TE (`71.4435` vs `62.2103`), so lower weighted training loss did not align with lower evaluation error in this run.
+## 4. Multi-seed validation results (5 seeds)
 
-## 6. Runtime and parameter comparison
+### Classical + PI
+- mean final L2: `0.916583`
+- std final L2: `0.058399`
+- mean final Linf: `1.061336`
+- std final Linf: `0.107421`
+- mean runtime: `14.7583 s`
+- std runtime: `1.3977 s`
+- mean final loss: `43.197057`
+- std final loss: `10.514407`
+- parameter count: `2241`
 
-- Parameter count is very close:
-  - Classical: `2241`
-  - TE-QPINN: `2306` (slightly higher)
-- Runtime:
-  - Classical is faster (`16.41s`)
-  - TE-QPINN is slower (`43.83s`)
+### TE-QPINN Surrogate + PI
+- mean final L2: `0.991693`
+- std final L2: `0.080669`
+- mean final Linf: `1.107482`
+- std final Linf: `0.087500`
+- mean runtime: `42.0679 s`
+- std runtime: `2.0448 s`
+- mean final loss: `48.784985`
+- std final loss: `9.389905`
+- parameter count: `2306`
 
-Interpretation: in this run, TE benefit is accuracy, not runtime.
+### Win counts (paired seeds)
+- TE-QPINN final L2 wins: `0 / 5`
+- TE-QPINN final Linf wins: `3 / 5`
 
-## 7. Improvement over earlier TE smoke baseline
+## 5. Interpretation
 
-Earlier TE smoke baseline (`outputs/benchmarks/te_qpinn/summary.csv`):
-- L2: `1.76838`
-- Linf: `1.90787`
+1. The earlier single-seed improvement did **not** generalize across 5 seeds.
+2. TE-QPINN should **not** be claimed as better overall at the current stage.
+3. Classical + PI remains stronger on:
+   - mean final L2,
+   - mean final Linf,
+   - mean runtime,
+   - mean final loss.
+4. TE-QPINN shows localized promise in Linf behavior, with `3/5` paired-seed Linf wins.
+5. The current TE-QPINN surrogate remains useful as an exploratory architecture, but it needs further tuning and/or optimizer strategy changes before it can be considered consistently competitive.
 
-Tuned TE on finalized `50x50` run:
-- L2: `0.88684` (about `49.9%` lower)
-- Linf: `0.94618` (about `50.4%` lower)
+## 6. Fairness and scope notes
 
-This confirms substantial improvement over the earlier TE smoke baseline.
+- Comparison is fair in core setup (same PDE, grid, seed list, and Adam-only epoch budget).
+- This is still a quantum-inspired surrogate evaluation, not a hardware/simulator quantum-advantage claim.
+- Multi-seed evidence now provides stronger reliability than single-seed interpretation.
 
-## 8. Adam vs Adam+LBFGS exploratory note
+## 7. Recommended next steps
 
-Exploratory TE-only trial (not part of the fair Adam-only comparison):
-- Adam + LBFGS achieved:
-  - L2: `0.07948`
-  - Linf: `0.18600`
-  - Runtime: about `634s`
-
-This run used a much heavier training budget and should be treated as exploratory only, not as a fair head-to-head result against the Adam-only benchmark.
-
-## 9. Fairness limitations
-
-- Single-seed result (`seed=42`) only.
-- No statistical confidence estimate yet (no variance across seeds).
-- Adam+LBFGS result is not budget-matched to the Adam-only comparison.
-- This repo currently uses a quantum-inspired surrogate (not a real quantum simulator/hardware claim).
-
-## 10. Key findings
-
-- Promising result: with matched Adam-only budget, TE-QPINN Surrogate + PI outperformed Classical + PI on L2 and Linf in this `50x50` run.
-- Parameter matching was achieved closely (`2306` vs `2241`).
-- TE-QPINN is slower in wall-clock time in this configuration.
-- Result is preliminary and should not be framed as statistical superiority yet.
-
-## 11. Recommended next steps
-
-1. Lock this tuned TE config as the current candidate for fair follow-up.
-2. Run multi-seed validation (e.g., `3-5` seeds) using the same fixed setup.
-3. Keep parameter budget tightly matched during all comparisons.
-4. Add explicit reporting of best/final metrics by seed and confidence intervals.
-5. Evaluate whether TE runtime can be reduced without losing the observed error advantage.
-6. Keep Adam+LBFGS as a separate exploratory track until a fair budget-matched protocol is defined.
+1. Ablation study:
+   - embedding depth/width,
+   - pairwise mixing on/off,
+   - residual branch on/off.
+2. Adam+LBFGS comparison as exploratory future work (clearly marked as non-budget-matched unless controlled).
+3. Equal-runtime comparison (instead of equal-epoch only) to evaluate accuracy-efficiency tradeoffs.
+4. Optimizer sensitivity study (learning rate, scheduler, clipping, optimizer type).
+5. Architecture tuning only after locking the evaluation protocol to prevent moving-target comparisons.

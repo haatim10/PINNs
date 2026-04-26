@@ -42,7 +42,22 @@ Matched setup: Adam-only, 12 epochs, seed 42, same fractional PI problem.
 | Classical + PI | 2241 | 16.41 | 62.2103 | 1.00381 | 1.08578 |
 | TE-QPINN Surrogate + PI | 2306 | 43.83 | 71.4435 | 0.88684 | 0.94618 |
 
-Interpretation: TE-QPINN improved L2 and Linf on this single-seed benchmark, with closely matched parameter count, but it was slower. This is promising but preliminary until validated across multiple seeds.
+Interpretation (single seed only): TE-QPINN improved L2 and Linf in this run, with closely matched parameter count, but it was slower. This was a promising signal, not a final conclusion.
+
+## Multi-Seed Validation (5 Seeds, Locked Config)
+
+Validated with `configs/benchmark_te_qpinn_multiseed.yaml` using seeds `[0,1,2,3,4]`.
+
+| Variant | Mean Final L2 | Std Final L2 | Mean Final Linf | Std Final Linf | Mean Runtime (s) | Std Runtime (s) | Mean Final Loss | Std Final Loss | Params |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Classical + PI | 0.916583 | 0.058399 | 1.061336 | 0.107421 | 14.7583 | 1.3977 | 43.197057 | 10.514407 | 2241 |
+| TE-QPINN Surrogate + PI | 0.991693 | 0.080669 | 1.107482 | 0.087500 | 42.0679 | 2.0448 | 48.784985 | 9.389905 | 2306 |
+
+Paired-seed win counts:
+- TE-QPINN final L2 wins: `0 / 5`
+- TE-QPINN final Linf wins: `3 / 5`
+
+Interpretation (multi-seed): the earlier single-seed gain did not generalize overall. Classical + PI remains stronger on mean L2, mean Linf, runtime, and final loss. TE-QPINN still shows localized promise on Linf behavior (3/5 wins), and remains useful as an exploratory architecture pending further tuning and optimizer studies.
 
 ## Branch Navigation (Quantum-Readiness)
 
@@ -72,6 +87,12 @@ Run TE-QPINN 50x50 benchmark:
 python scripts/benchmark_te_qpinn.py --benchmark-config configs/benchmark_te_qpinn_50.yaml
 ```
 
+Run TE-QPINN multiseed benchmark:
+
+```bash
+python scripts/benchmark_te_qpinn.py --benchmark-config configs/benchmark_te_qpinn_multiseed.yaml
+```
+
 Detailed benchmark analysis:
 - `docs/te_qpinn_benchmark_analysis.md`
 
@@ -81,18 +102,19 @@ Detailed benchmark analysis:
 1. [At a Glance: Governing Problem](#at-a-glance-governing-problem)
 2. [Quantum-Inspired Extension: TE-QPINN Surrogate](#quantum-inspired-extension-te-qpinn-surrogate)
 3. [Final 50x50 Single-Seed Benchmark](#final-50x50-single-seed-benchmark)
-4. [Quick Commands](#quick-commands)
-5. [Problem Formulation](#problem-formulation)
-6. [Results](#results)
-7. [Mathematical Background](#mathematical-background)
-8. [The L1 Discretization Scheme](#the-l1-discretization-scheme)
-9. [Graded Mesh Construction](#graded-mesh-construction)
-10. [Collocation Point Selection](#collocation-point-selection)
-11. [Integral Term Approximation](#integral-term-approximation)
-12. [Implementation Details](#implementation-details)
-13. [Neural Network Architecture](#neural-network-architecture)
-14. [Training Methodology](#training-methodology)
-15. [Usage](#usage)
+4. [Multi-Seed Validation (5 Seeds, Locked Config)](#multi-seed-validation-5-seeds-locked-config)
+5. [Quick Commands](#quick-commands)
+6. [Problem Formulation](#problem-formulation)
+7. [Results](#results)
+8. [Mathematical Background](#mathematical-background)
+9. [The L1 Discretization Scheme](#the-l1-discretization-scheme)
+10. [Graded Mesh Construction](#graded-mesh-construction)
+11. [Collocation Point Selection](#collocation-point-selection)
+12. [Integral Term Approximation](#integral-term-approximation)
+13. [Implementation Details](#implementation-details)
+14. [Neural Network Architecture](#neural-network-architecture)
+15. [Training Methodology](#training-methodology)
+16. [Usage](#usage)
 
 ---
 

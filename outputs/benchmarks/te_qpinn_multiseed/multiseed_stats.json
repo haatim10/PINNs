@@ -1,0 +1,51 @@
+{
+  "benchmark_config": "configs/benchmark_te_qpinn_multiseed.yaml",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "metrics": {
+    "classical_pi": {
+      "label": "Classical + PI",
+      "n_runs": 5,
+      "mean_final_l2": 0.9165827632481419,
+      "std_final_l2": 0.05839869100206328,
+      "mean_final_linf": 1.0613364655403887,
+      "std_final_linf": 0.1074211079689153,
+      "mean_runtime_sec": 14.758290660148486,
+      "std_runtime_sec": 1.3976595315708094,
+      "mean_final_loss": 43.1970570763351,
+      "std_final_loss": 10.514406824631548,
+      "parameter_counts": [
+        2241
+      ],
+      "mean_parameter_count": 2241.0,
+      "std_parameter_count": 0.0
+    },
+    "te_qpinn_surrogate_pi": {
+      "label": "TE-QPINN Surrogate + PI",
+      "n_runs": 5,
+      "mean_final_l2": 0.9916930719438856,
+      "std_final_l2": 0.08066919733656297,
+      "mean_final_linf": 1.1074816825555756,
+      "std_final_linf": 0.08749974622587907,
+      "mean_runtime_sec": 42.06787223564461,
+      "std_runtime_sec": 2.044815408228824,
+      "mean_final_loss": 48.78498539889444,
+      "std_final_loss": 9.389904843035486,
+      "parameter_counts": [
+        2306
+      ],
+      "mean_parameter_count": 2306.0,
+      "std_parameter_count": 0.0
+    }
+  },
+  "wins": {
+    "paired_seeds": 5,
+    "te_qpinn_wins_by_l2": 0,
+    "te_qpinn_wins_by_linf": 3
+  }
+}
