@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.model_factory import build_model, model_name_from_config
 from src.mesh import GradedMesh, L1Coefficients
-from src.physics_integro import IntegroDifferentialResidual
+from src.physics_integro import IntegroDifferentialResidual, exact_solution
 
 
 def set_seed(seed: int):
@@ -148,6 +148,7 @@ class IntegroDiffDataset:
         self.alpha = prob['alpha']
         self.x_min = prob.get('x_min', 0.0)
         self.x_max = prob.get('x_max', 1.0)
+        self.solution_cfg = prob.get('solution', {})
         
         self.x_grid = torch.linspace(self.x_min, self.x_max, self.N_x, dtype=torch.float64, device=device)
         self.t_grid = mesh.get_nodes()
@@ -175,13 +176,11 @@ class IntegroDiffDataset:
         t_idx = torch.randint(1, self.N_t + 1, (self.N_boundary,), device=self.device)
         t = self.t_grid[t_idx]
         
-        # Left boundary: x=0, u(0,t) = t^α
         x_left = torch.zeros(self.N_boundary, dtype=torch.float64, device=self.device)
-        u_left = t ** self.alpha
+        u_left = exact_solution(x_left, t, self.alpha, self.solution_cfg)
         
-        # Right boundary: x=1, u(1,t) = -t^α
         x_right = torch.ones(self.N_boundary, dtype=torch.float64, device=self.device)
-        u_right = -(t ** self.alpha)
+        u_right = exact_solution(x_right, t, self.alpha, self.solution_cfg)
         
         return (torch.cat([x_left, x_right]), 
                 torch.cat([t, t]), 
@@ -192,7 +191,7 @@ class IntegroDiffDataset:
         x_idx = torch.randint(0, self.N_x, (self.N_initial,), device=self.device)
         x = self.x_grid[x_idx]
         t = torch.zeros(self.N_initial, dtype=torch.float64, device=self.device)
-        u = torch.zeros(self.N_initial, dtype=torch.float64, device=self.device)
+        u = exact_solution(x, t, self.alpha, self.solution_cfg)
         return x, t, u
     
     def get_training_data(self):
@@ -223,6 +222,7 @@ class IntegroDiffLoss:
             model, mesh, l1_coeffs,
             alpha=prob['alpha'],
             beta=prob['beta'],
+            solution_cfg=prob.get('solution', {}),
             n_quad=config['discretization'].get('N_integral_quad', 20),
             device=device
         )
@@ -265,7 +265,7 @@ def get_cosine_warmup_scheduler(optimizer, warmup_epochs, total_epochs, min_lr):
     return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
 
 
-def compute_errors(model, alpha, device, N_x=100, N_t=100, x_min=0.0, x_max=1.0, t_max=1.0, t_min=0.0):
+def compute_errors(model, alpha, device, N_x=100, N_t=100, x_min=0.0, x_max=1.0, t_max=1.0, t_min=0.0, solution_cfg=None):
     """Compute relative L2 and Linf errors against exact solution."""
     model.eval()
     x = torch.linspace(x_min, x_max, N_x, dtype=torch.float64, device=device)
@@ -275,7 +275,7 @@ def compute_errors(model, alpha, device, N_x=100, N_t=100, x_min=0.0, x_max=1.0,
 
     with torch.no_grad():
         u_pred = model(X.flatten(), T.flatten()).reshape(X.shape)
-        u_exact = (T ** alpha) * torch.cos(np.pi * X)
+        u_exact = exact_solution(X, T, alpha, solution_cfg)
 
         error = torch.abs(u_pred - u_exact)
         l2_error = (torch.norm(error) / torch.norm(u_exact)).item()
@@ -285,7 +285,15 @@ def compute_errors(model, alpha, device, N_x=100, N_t=100, x_min=0.0, x_max=1.0,
     return l2_error, linf_error
 
 
-def train(config_path, resume=False, early_stop_epoch=None, generate_artifacts=True):
+def train(
+    config_path,
+    resume=False,
+    early_stop_epoch=None,
+    early_stop_patience=None,
+    early_stop_min_delta=1e-4,
+    early_stop_metric='l2',
+    generate_artifacts=True,
+):
     """Main training function."""
     # Load config
     with open(config_path, 'r') as f:
@@ -305,6 +313,7 @@ def train(config_path, resume=False, early_stop_epoch=None, generate_artifacts=T
     disc = config['discretization']
     train_cfg = config['training']
     paths = config.get('paths', {})
+    solution_cfg = prob.get('solution', {})
     
     alpha = prob['alpha']
     beta = prob['beta']
@@ -388,6 +397,9 @@ def train(config_path, resume=False, early_stop_epoch=None, generate_artifacts=T
     # Training history
     history = {'loss': [], 'l2': [], 'linf': [], 'epochs': []}
     start_epoch = 1
+    best_monitor = float('inf')
+    plateau_epochs = 0
+    early_stop_metric = str(early_stop_metric).lower()
     
     # Resume from checkpoint
     if resume:
@@ -455,6 +467,7 @@ def train(config_path, resume=False, early_stop_epoch=None, generate_artifacts=T
                 x_max=x_max,
                 t_max=t_max,
                 t_min=0.0,
+                solution_cfg=solution_cfg,
             )
             history['loss'].append(losses['total'].item())
             history['l2'].append(l2_err)
@@ -464,6 +477,26 @@ def train(config_path, resume=False, early_stop_epoch=None, generate_artifacts=T
             lr = optimizer.param_groups[0]['lr']
             print(f"\nEpoch {epoch}: Loss={losses['total'].item():.4e}, "
                   f"L2={l2_err:.4e}, Linf={linf_err:.4e}, LR={lr:.2e}")
+
+            if early_stop_metric == 'loss':
+                monitored_value = losses['total'].item()
+            elif early_stop_metric == 'linf':
+                monitored_value = linf_err
+            else:
+                monitored_value = l2_err
+
+            if monitored_value < (best_monitor - early_stop_min_delta):
+                best_monitor = monitored_value
+                plateau_epochs = 0
+            else:
+                plateau_epochs += 1
+
+            if early_stop_patience is not None and plateau_epochs >= early_stop_patience:
+                print(
+                    f"\n>>> Plateau early stopping triggered at epoch {epoch} "
+                    f"(metric={early_stop_metric}, best={best_monitor:.6e})"
+                )
+                break
         
         # Checkpoint
         if epoch % checkpoint_interval == 0:
@@ -504,6 +537,7 @@ def train(config_path, resume=False, early_stop_epoch=None, generate_artifacts=T
         x_max=x_max,
         t_max=t_max,
         t_min=0.0,
+        solution_cfg=solution_cfg,
     )
     print(f"L2 Error after Adam: {l2_err:.6e}")
     print(f"Linf Error after Adam: {linf_err:.6e}")
@@ -564,6 +598,7 @@ def train(config_path, resume=False, early_stop_epoch=None, generate_artifacts=T
         x_max=x_max,
         t_max=t_max,
         t_min=0.0,
+        solution_cfg=solution_cfg,
     )
     print("=" * 60)
     print(f"Final L2 Error: {l2_err:.6e}")

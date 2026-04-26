@@ -13,12 +13,13 @@ import yaml
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.model_factory import build_model, model_name_from_config
+from src.physics_integro import exact_solution as integro_exact_solution
 
 
 def exact_solution(x, t, alpha, problem_type):
     """Return exact solution for supported problems."""
     if problem_type == "integro_differential":
-        return (t ** alpha) * torch.cos(np.pi * x)
+        return integro_exact_solution(x, t, alpha, {"family": "cosine", "spatial_frequency": 1.0})
     return (t ** alpha) * torch.sin(np.pi * x)
 
 
@@ -64,6 +65,7 @@ def main():
     problem = config.get("problem", {})
     problem_type = problem.get("type", "fractional")
     alpha = problem.get("alpha", 0.5)
+    solution_cfg = problem.get("solution", {})
     x_min = problem.get("x_min", 0.0)
     x_max = problem.get("x_max", 1.0)
     t_max = problem.get("t_max", 1.0)
@@ -88,7 +90,10 @@ def main():
     with torch.no_grad():
         u_pred = model(X.flatten(), T.flatten()).reshape(N, N).cpu().numpy()
 
-    u_exact = exact_solution(X, T, alpha, problem_type).cpu().numpy()
+    if problem_type == "integro_differential":
+        u_exact = integro_exact_solution(X, T, alpha, solution_cfg).cpu().numpy()
+    else:
+        u_exact = exact_solution(X, T, alpha, problem_type).cpu().numpy()
     error = np.abs(u_pred - u_exact)
 
     x_np = x.cpu().numpy()

@@ -14,12 +14,13 @@ import yaml
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.model_factory import build_model, model_name_from_config
+from src.physics_integro import exact_solution as integro_exact_solution
 
 
 def exact_solution(x, t, alpha, problem_type):
     """Return the exact solution associated with the configured problem."""
     if problem_type == "integro_differential":
-        return (t ** alpha) * torch.cos(np.pi * x)
+        return integro_exact_solution(x, t, alpha, {"family": "cosine", "spatial_frequency": 1.0})
     return (t ** alpha) * torch.sin(np.pi * x)
 
 
@@ -165,6 +166,7 @@ def main():
     problem = config.get("problem", {})
     problem_type = problem.get("type", "fractional")
     alpha = problem.get("alpha", 0.5)
+    solution_cfg = problem.get("solution", {})
     x_min = problem.get("x_min", 0.0)
     x_max = problem.get("x_max", 1.0)
     t_max = problem.get("t_max", 1.0)
@@ -187,7 +189,10 @@ def main():
     with torch.no_grad():
         u_pred = model(x_mesh.flatten(), t_mesh.flatten()).reshape(x_mesh.shape)
 
-    u_exact = exact_solution(x_mesh, t_mesh, alpha, problem_type)
+    if problem_type == "integro_differential":
+        u_exact = integro_exact_solution(x_mesh, t_mesh, alpha, solution_cfg)
+    else:
+        u_exact = exact_solution(x_mesh, t_mesh, alpha, problem_type)
     metrics = compute_error_metrics(u_pred, u_exact, t_mesh)
 
     print("\nError metrics:")

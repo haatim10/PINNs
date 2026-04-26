@@ -1,4 +1,4 @@
-# Small benchmark config for classical vs quantum-ready comparison
+# Tuned harder oscillatory benchmark config for classical vs quantum-ready comparison
 
 problem:
   type: integro_differential
@@ -10,35 +10,35 @@ problem:
   mesh_grading: 2.0
   solution:
     family: cosine
-    spatial_frequency: 1.0
-    time_power: 0.5
+    spatial_frequency: 3.0
+    time_power: 0.35
     amplitude: 1.0
     phase: 0.0
 
 discretization:
-  N_x: 50
-  N_t: 50
-  N_collocation: 32
-  N_boundary: 16
-  N_initial: 16
-  N_integral_quad: 10
+  N_x: 100
+  N_t: 100
+  N_collocation: 90
+  N_boundary: 24
+  N_initial: 24
+  N_integral_quad: 12
 
 network:
   model_type: classical
   input_dim: 2
   output_dim: 1
-  hidden_layers: [32, 32, 32]
-  activation: tanh
+  hidden_layers: [64, 64, 64, 64]
+  activation: mexican_hat
   quantum:
     backend: classical_emulator
-    n_qubits: 8
-    n_layers: 3
-    feature_scale: 1.0
-    entanglement_strength: 0.15
+    n_qubits: 6
+    n_layers: 2
+    feature_scale: 0.7
+    entanglement_strength: 0.08
     residual_connection: true
 
 training:
-  epochs: 12
+  epochs: 20
   learning_rate: 0.0005
   scheduler:
     enabled: false

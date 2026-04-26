@@ -1,8 +1,27 @@
 # PI-fMI: Physics-Informed Neural Networks for Fractional Integro-Differential Equations
 
-**`integro-differential-product-integration` branch:** Enhanced version with kernel-aware product integration for weakly singular integrals, larger problem (200×200 grid), and integral convergence monitoring.
+**`feature/quantum-readiness` branch:** Quantum-ready PINN benchmark branch with a configurable classical baseline, a quantum-inspired hybrid model, and a faster matched-budget comparison suite.
 
-This branch implements a PINN solver for **time-fractional integro-differential equations** with variable coefficients and weakly singular Volterra integrals.
+This branch keeps the integro-differential solver available as the reference workload, but the main focus is the quantum-ready model path, benchmark reporting, and oscillatory test cases.
+
+## Branch Navigation (Quantum-Readiness)
+
+- Organized benchmark dossier: `docs/quantum-readiness/README.md`
+- Journal-style experiment log: `docs/quantum-readiness/JOURNAL.md`
+- Checked-in comparison plots: `docs/quantum-readiness/figures/`
+- Generated run artifacts (local): `outputs/benchmarks/`
+
+## Quantum-Ready Benchmark Suite
+
+Run the benchmark from the terminal with one of the preset configs:
+
+```bash
+python scripts/benchmark_quantum_ready.py --config configs/benchmark_quantum_ready.yaml
+python scripts/benchmark_quantum_ready.py --config configs/benchmark_quantum_ready_medium.yaml
+python scripts/benchmark_quantum_ready.py --config configs/benchmark_quantum_ready_harder.yaml
+```
+
+Each run writes `benchmark_results.json`, `benchmark_summary.csv`, `benchmark_aggregate.json`, publication-style plots, and `benchmark_report.md` under the requested benchmark output directory inside `outputs/benchmarks/`.
 
 ---
 
@@ -52,7 +71,7 @@ $$D_t^{\alpha} u(x,t) - (x^2 + 1)\frac{\partial^2 u}{\partial x^2} + \int_0^t \s
 
 ---
 
-## Results
+## Historical Reference
 
 ### Final Results (200×200 Grid with Product Integration)
 

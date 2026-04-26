@@ -4,21 +4,90 @@ Physics Module for Time-Fractional Integro-Differential Equation
 PDE: D_t^α u - (x²+1) u_xx + ∫₀ᵗ sin(x)(t-s)^{-β} u(x,s) ds = f(x,t)
 
 Domain: x ∈ [0,1], t ∈ (0,1]
-BC: u(0,t) = t^α, u(1,t) = -t^α  
+BC: u(x,t) = exact_solution(x,t) on x = 0,1
 IC: u(x,0) = 0
-Exact solution: u(x,t) = t^α cos(πx)
 
-Source term derivation:
-- D_t^α[t^α cos(πx)] = Γ(α+1) cos(πx)
-- (x²+1) u_xx = -(x²+1) π² t^α cos(πx)
-- ∫₀ᵗ sin(x)(t-s)^{-β} s^α cos(πx) ds = sin(x)cos(πx) t^{α+1-β} Γ(α+1)Γ(1-β)/Γ(α+2-β)
+Default exact solution family:
+u(x,t) = A t^p cos(kπx + φ)
 
-f(x,t) = cos(πx)[Γ(α+1) + (x²+1)π²t^α + sin(x) t^{α+1-β} Γ(α+1)Γ(1-β)/Γ(α+2-β)]
+The frequency k and time power p are configurable so the same code path can
+represent the standard branch problem and a harder oscillatory variant.
 """
 
 import torch
 import numpy as np
 from scipy.special import gamma
+
+
+def resolve_solution_config(solution_cfg: dict | None, alpha: float) -> dict:
+    """Return normalized exact-solution parameters."""
+    cfg = dict(solution_cfg or {})
+    cfg.setdefault("family", "cosine")
+    cfg.setdefault("spatial_frequency", 1.0)
+    cfg.setdefault("time_power", alpha)
+    cfg.setdefault("amplitude", 1.0)
+    cfg.setdefault("phase", 0.0)
+    return cfg
+
+
+def exact_solution(
+    x: torch.Tensor,
+    t: torch.Tensor,
+    alpha: float,
+    solution_cfg: dict | None = None,
+) -> torch.Tensor:
+    """Evaluate the configured exact solution."""
+    cfg = resolve_solution_config(solution_cfg, alpha)
+    family = str(cfg.get("family", "cosine")).lower()
+    frequency = float(cfg.get("spatial_frequency", 1.0))
+    time_power = float(cfg.get("time_power", alpha))
+    amplitude = float(cfg.get("amplitude", 1.0))
+    phase = float(cfg.get("phase", 0.0))
+
+    argument = frequency * np.pi * x + phase
+    time_factor = amplitude * (t ** time_power)
+
+    if family == "cosine":
+        return time_factor * torch.cos(argument)
+    if family == "sine":
+        return time_factor * torch.sin(argument)
+
+    raise ValueError(f"Unsupported solution family '{family}'")
+
+
+def source_term(
+    x: torch.Tensor,
+    t: torch.Tensor,
+    alpha: float,
+    beta: float,
+    solution_cfg: dict | None = None,
+) -> torch.Tensor:
+    """Compute the forcing term consistent with the configured exact solution."""
+    cfg = resolve_solution_config(solution_cfg, alpha)
+    family = str(cfg.get("family", "cosine")).lower()
+    frequency = float(cfg.get("spatial_frequency", 1.0))
+    time_power = float(cfg.get("time_power", alpha))
+    amplitude = float(cfg.get("amplitude", 1.0))
+    phase = float(cfg.get("phase", 0.0))
+
+    argument = frequency * np.pi * x + phase
+    trig = torch.cos(argument) if family == "cosine" else torch.sin(argument)
+
+    gamma_time = gamma(time_power + 1)
+    gamma_time_fractional = gamma(time_power + 1 - alpha)
+    gamma_kernel = gamma(1 - beta)
+    gamma_kernel_ratio = gamma(time_power + 2 - beta)
+
+    derivative_term = amplitude * (gamma_time / gamma_time_fractional) * (t ** (time_power - alpha))
+    diffusion_term = amplitude * (x**2 + 1) * (frequency * np.pi) ** 2 * (t ** time_power)
+    integral_term = (
+        amplitude
+        * torch.sin(x)
+        * (t ** (time_power + 1 - beta))
+        * (gamma_time * gamma_kernel / gamma_kernel_ratio)
+    )
+
+    return trig * (derivative_term + diffusion_term + integral_term)
 
 
 class IntegroDifferentialResidual:
@@ -31,13 +100,15 @@ class IntegroDifferentialResidual:
     - Composite quadrature for weakly singular integral
     """
     
-    def __init__(self, model, mesh, l1_coeffs, alpha: float, beta: float, 
+    def __init__(self, model, mesh, l1_coeffs, alpha: float, beta: float,
+                 solution_cfg: dict | None = None,
                  n_quad: int = 20, device: str = "cpu"):
         self.model = model
         self.mesh = mesh
         self.l1_coeffs = l1_coeffs
         self.alpha = alpha
         self.beta = beta
+        self.solution_cfg = resolve_solution_config(solution_cfg, alpha)
         self.n_quad = n_quad
         self.device = device
         
@@ -51,22 +122,12 @@ class IntegroDifferentialResidual:
                                self.gamma_alpha_plus_2_minus_beta)
         
     def exact_solution(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
-        """u(x,t) = t^α cos(πx)"""
-        return (t ** self.alpha) * torch.cos(np.pi * x)
+        """Evaluate the configured exact solution."""
+        return exact_solution(x, t, self.alpha, self.solution_cfg)
     
     def source_term(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
-        """
-        f(x,t) = cos(πx)[Γ(α+1) + (x²+1)π²t^α + sin(x) t^{α+1-β} Γ(α+1)Γ(1-β)/Γ(α+2-β)]
-        """
-        cos_pi_x = torch.cos(np.pi * x)
-        sin_x = torch.sin(x)
-        
-        # Three terms
-        term1 = self.gamma_alpha_plus_1
-        term2 = (x**2 + 1) * (np.pi**2) * (t ** self.alpha)
-        term3 = sin_x * (t ** (self.alpha + 1 - self.beta)) * self.integral_coeff
-        
-        return cos_pi_x * (term1 + term2 + term3)
+        """Return the forcing term matching the configured exact solution."""
+        return source_term(x, t, self.alpha, self.beta, self.solution_cfg)
     
     def compute_u_and_derivatives(self, x: torch.Tensor, t: torch.Tensor):
         """Compute u, u_x, and u_xx using automatic differentiation."""
@@ -415,18 +476,21 @@ class BoundaryConditions:
     u(1,t) = -t^α
     """
     
-    def __init__(self, model, alpha: float, device: str = "cpu"):
+    def __init__(self, model, alpha: float, solution_cfg: dict | None = None, device: str = "cpu"):
         self.model = model
         self.alpha = alpha
+        self.solution_cfg = resolve_solution_config(solution_cfg, alpha)
         self.device = device
         
     def left_bc(self, t: torch.Tensor) -> torch.Tensor:
-        """u(0,t) = t^α"""
-        return t ** self.alpha
+        """Exact boundary value at x = 0."""
+        x = torch.zeros_like(t)
+        return exact_solution(x, t, self.alpha, self.solution_cfg)
     
     def right_bc(self, t: torch.Tensor) -> torch.Tensor:
-        """u(1,t) = -t^α"""
-        return -(t ** self.alpha)
+        """Exact boundary value at x = 1."""
+        x = torch.ones_like(t)
+        return exact_solution(x, t, self.alpha, self.solution_cfg)
     
     def compute_bc_loss(self, t_left: torch.Tensor, t_right: torch.Tensor):
         """Compute boundary condition residuals."""

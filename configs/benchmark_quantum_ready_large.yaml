@@ -1,4 +1,4 @@
-# Small benchmark config for classical vs quantum-ready comparison
+# Large benchmark config for classical vs quantum-ready comparison
 
 problem:
   type: integro_differential
@@ -16,18 +16,18 @@ problem:
     phase: 0.0
 
 discretization:
-  N_x: 50
-  N_t: 50
-  N_collocation: 32
-  N_boundary: 16
-  N_initial: 16
-  N_integral_quad: 10
+  N_x: 150
+  N_t: 150
+  N_collocation: 100
+  N_boundary: 32
+  N_initial: 32
+  N_integral_quad: 15
 
 network:
   model_type: classical
   input_dim: 2
   output_dim: 1
-  hidden_layers: [32, 32, 32]
+  hidden_layers: [64, 64, 64]
   activation: tanh
   quantum:
     backend: classical_emulator
@@ -38,7 +38,7 @@ network:
     residual_connection: true
 
 training:
-  epochs: 12
+  epochs: 24
   learning_rate: 0.0005
   scheduler:
     enabled: false
