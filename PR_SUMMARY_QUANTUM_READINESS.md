@@ -66,6 +66,13 @@ The benchmark conclusion is intentionally conservative: the infrastructure is pr
 - Quantum-ready: runtime 72.2919 s, final L2 1.0281, final Linf 1.3140
 - Result: tuned quantum-ready improves strongly on this seed; multi-seed confirmation still pending.
 
+### Harder tuned confirmation (3 seeds)
+- Config: `configs/benchmark_quantum_ready_harder_tuned.yaml`
+- Seeds: 42, 123, 999
+- Classical: runtime 89.5987 s, final L2 1.1096, final Linf 1.3778
+- Quantum-ready: runtime 71.7534 s, final L2 3.1333, final Linf 2.8376
+- Result: tuned quantum-ready is consistently faster, but significantly worse on average accuracy.
+
 ## Validation
 
 - `pytest -q tests/test_integro_solution.py tests/test_model_factory.py`
@@ -81,7 +88,7 @@ python scripts/benchmark_quantum_ready.py --config configs/benchmark_quantum_rea
 
 ## Recommended Follow-up
 
-1. Complete full 3-seed run for the tuned harder config.
-2. Add confidence intervals via repeated runs.
-3. Run parameter-matched ablations for tighter fairness claims.
+1. Add confidence intervals via repeated runs.
+2. Run parameter-matched ablations for tighter fairness claims.
+3. Investigate loss/objective balancing to recover tuned accuracy while retaining runtime gains.
 4. Keep the model-factory interface stable for a future true quantum backend.

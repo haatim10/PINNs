@@ -69,16 +69,37 @@ Observed:
 Decision:
 Treat this as promising but preliminary. Multi-seed confirmation is still required before making a broad claim.
 
-## Entry 4: Branch-level conclusion
+## Entry 4: Confirm tuned behavior across all seeds
+
+Date: 2026-04-26
+
+Hypothesis:
+The tuned block that improved seed 42 may improve stability and average errors across seeds.
+
+Setup:
+- Config: `configs/benchmark_quantum_ready_harder_tuned.yaml`
+- Seeds: 42, 123, 999
+- Epochs: 20
+- Device: CUDA
+
+Observed:
+- Classical: runtime 89.5987 s, final L2 1.1096, final Linf 1.3778.
+- Quantum-ready: runtime 71.7534 s, final L2 3.1333, final Linf 2.8376.
+- Quantum-ready won runtime on all seeds but lost average L2/Linf by a wide margin.
+
+Decision:
+Reframe tuned result as a speed-versus-accuracy tradeoff, not a net quality win.
+
+## Entry 5: Branch-level conclusion
 
 Date: 2026-04-26
 
 Conclusion:
-The branch now contains a complete quantum-readiness benchmarking workflow with reproducible configs, aggregate metrics, ratio plots, and markdown reports. Current evidence supports the benchmark infrastructure strongly, while model-performance claims remain conservative: the classical baseline still wins on the multi-seed medium and harder suites, and the tuned variant shows targeted promise that needs full multi-seed confirmation.
+The branch now contains a complete quantum-readiness benchmarking workflow with reproducible configs, aggregate metrics, ratio plots, and markdown reports. Current evidence supports the benchmark infrastructure strongly, while model-performance claims remain conservative: the classical baseline still wins on multi-seed accuracy across medium, harder, and tuned-harder confirmation runs. The tuned variant demonstrates runtime speedups but not accuracy gains overall.
 
 ## Next experiment queue
 
-1. Complete full three-seed run for `benchmark_quantum_ready_harder_tuned.yaml`.
-2. Add confidence intervals over multiple reruns per seed.
-3. Run controlled ablations on quantum block depth and feature scaling only.
-4. Add budget-equalized comparison where classical parameter count is matched to tuned quantum-ready.
+1. Add confidence intervals over multiple reruns per seed.
+2. Run controlled ablations on quantum block depth and feature scaling only.
+3. Add budget-equalized comparison where classical parameter count is matched to tuned quantum-ready.
+4. Test mixed objective weighting to recover accuracy while preserving tuned runtime speed.
