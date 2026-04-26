@@ -18,13 +18,33 @@ class PDEResidual:
     L1 scheme: D_t^alpha u(t_n) = d_{n,1}*u^n - d_{n,n}*u^0 - sum_{k=1}^{n-1}(d_{n,k}-d_{n,k+1})*u^{n-k}
     """
     
-    def __init__(self, model, mesh, l1_coeffs, alpha: float, device: str = "cpu"):
+    def __init__(
+        self,
+        model,
+        mesh,
+        l1_coeffs,
+        alpha: float,
+        device: str = "cpu",
+        history_gradient_mode: str = "full",
+    ):
         self.model = model
         self.mesh = mesh
         self.l1_coeffs = l1_coeffs
         self.alpha = alpha
         self.device = device
+        self.history_gradient_mode = str(history_gradient_mode).lower()
+        if self.history_gradient_mode not in {"full", "detached_legacy"}:
+            raise ValueError(
+                "history_gradient_mode must be one of: full, detached_legacy"
+            )
         self.gamma_alpha_plus_1 = gamma(alpha + 1)
+
+    def _history_model_eval(self, x_hist: torch.Tensor, t_hist: torch.Tensor) -> torch.Tensor:
+        """Evaluate history-state terms with configurable gradient behavior."""
+        if self.history_gradient_mode == "detached_legacy":
+            with torch.no_grad():
+                return self.model(x_hist, t_hist).squeeze()
+        return self.model(x_hist, t_hist).squeeze()
         
     def source_term(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
         """f(x,t) = [Gamma(alpha+1) + pi^2 * t^alpha] * sin(pi*x)"""
@@ -83,16 +103,14 @@ class PDEResidual:
             
             # - d_{n,n} * u^0 (initial value)
             t_0 = t_nodes[0].expand(num_points)
-            with torch.no_grad():
-                u_0 = self.model(x_n, t_0).squeeze()
+            u_0 = self._history_model_eval(x_n, t_0)
             frac_deriv = frac_deriv - coeffs[n_val] * u_0
             
             # - sum_{k=1}^{n-1} (d_{n,k} - d_{n,k+1}) * u^{n-k}
             for k in range(1, n_val):
                 idx = n_val - k
                 t_idx = t_nodes[idx].expand(num_points)
-                with torch.no_grad():
-                    u_idx = self.model(x_n, t_idx).squeeze()
+                u_idx = self._history_model_eval(x_n, t_idx)
                 diff_coeff = coeffs[k] - coeffs[k + 1]
                 frac_deriv = frac_deriv - diff_coeff * u_idx
             

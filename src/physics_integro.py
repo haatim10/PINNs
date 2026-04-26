@@ -102,7 +102,8 @@ class IntegroDifferentialResidual:
     
     def __init__(self, model, mesh, l1_coeffs, alpha: float, beta: float,
                  solution_cfg: dict | None = None,
-                 n_quad: int = 20, device: str = "cpu"):
+                 n_quad: int = 20, device: str = "cpu",
+                 history_gradient_mode: str = "full"):
         self.model = model
         self.mesh = mesh
         self.l1_coeffs = l1_coeffs
@@ -111,6 +112,11 @@ class IntegroDifferentialResidual:
         self.solution_cfg = resolve_solution_config(solution_cfg, alpha)
         self.n_quad = n_quad
         self.device = device
+        self.history_gradient_mode = str(history_gradient_mode).lower()
+        if self.history_gradient_mode not in {"full", "detached_legacy"}:
+            raise ValueError(
+                "history_gradient_mode must be one of: full, detached_legacy"
+            )
         
         # Precompute gamma function values
         self.gamma_alpha_plus_1 = gamma(alpha + 1)
@@ -120,6 +126,13 @@ class IntegroDifferentialResidual:
         # Coefficient for integral term in source
         self.integral_coeff = (self.gamma_alpha_plus_1 * self.gamma_1_minus_beta / 
                                self.gamma_alpha_plus_2_minus_beta)
+
+    def _history_model_eval(self, x_hist: torch.Tensor, t_hist: torch.Tensor) -> torch.Tensor:
+        """Evaluate history-state terms with configurable gradient behavior."""
+        if self.history_gradient_mode == "detached_legacy":
+            with torch.no_grad():
+                return self.model(x_hist, t_hist).squeeze()
+        return self.model(x_hist, t_hist).squeeze()
         
     def exact_solution(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
         """Evaluate the configured exact solution."""
@@ -188,8 +201,7 @@ class IntegroDifferentialResidual:
             for k in range(1, n_val):
                 idx = n_val - k
                 t_idx = t_nodes[idx].expand(num_points)
-                with torch.no_grad():
-                    u_idx = self.model(x_n, t_idx).squeeze()
+                u_idx = self._history_model_eval(x_n, t_idx)
                 diff_coeff = coeffs[k] - coeffs[k + 1]
                 frac_deriv = frac_deriv - diff_coeff * u_idx
             
@@ -252,13 +264,12 @@ class IntegroDifferentialResidual:
             # Precompute u at all mesh nodes t_0, t_1, ..., t_n in one batched call
             # Stack all (x, t) pairs: for each of the num_points x-values,
             # we need u evaluated at t_0, t_1, ..., t_n
-            with torch.no_grad():
-                u_at_nodes = []
-                for j_idx in range(n_val + 1):
-                    t_j_expanded = t_nodes[j_idx].expand(num_points)
-                    u_j = self.model(x_n, t_j_expanded).squeeze()
-                    u_at_nodes.append(u_j)
-                # u_at_nodes[j] has shape (num_points,) for j = 0, ..., n_val
+            u_at_nodes = []
+            for j_idx in range(n_val + 1):
+                t_j_expanded = t_nodes[j_idx].expand(num_points)
+                u_j = self._history_model_eval(x_n, t_j_expanded)
+                u_at_nodes.append(u_j)
+            # u_at_nodes[j] has shape (num_points,) for j = 0, ..., n_val
             
             # Compute integral using product integration weights
             integral_sum = torch.zeros(num_points, dtype=torch.float64, device=self.device)
@@ -353,8 +364,7 @@ class IntegroDifferentialResidual:
                 
                 # Evaluate u(x, s) = u(x, t_n * τ)
                 s_tensor = torch.tensor(s, dtype=torch.float64, device=self.device).expand(num_points)
-                with torch.no_grad():
-                    u_s = self.model(x_n, s_tensor).squeeze()
+                u_s = self._history_model_eval(x_n, s_tensor)
                 
                 integral_sum = integral_sum + w * kernel * u_s
             
