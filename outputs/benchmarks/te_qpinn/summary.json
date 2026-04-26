@@ -1,0 +1,148 @@
+{
+  "benchmark_config": "configs/benchmark_te_qpinn_smoke.yaml",
+  "seeds": [
+    42
+  ],
+  "records": [
+    {
+      "run_name": "classical_pi",
+      "label": "Classical + PI",
+      "seed": 42,
+      "model_type": "classical",
+      "epochs": 3,
+      "final_epoch": 3,
+      "runtime_sec": 3.381838170113042,
+      "cpu_rss_delta_mb": 881.89453125,
+      "peak_gpu_memory_mb": 21.3896484375,
+      "parameter_count": 1297,
+      "final_loss": 41.528454397226014,
+      "final_l2": 1.027993697151184,
+      "final_linf": 1.196070977589545,
+      "best_loss": 41.528454397226014,
+      "best_loss_epoch": 3,
+      "best_l2": 1.027993697151184,
+      "best_l2_epoch": 3,
+      "best_linf": 1.196070977589545,
+      "best_linf_epoch": 3,
+      "config_source": "/root/projects/PINNs/configs/benchmark_te_qpinn_smoke_classical_pi.yaml",
+      "config_path": "outputs/benchmarks/te_qpinn/seed_42/classical_pi/config.generated.yaml",
+      "history": {
+        "loss": [
+          51.01827521598622,
+          49.554626726429305,
+          41.528454397226014
+        ],
+        "l2": [
+          1.089870643775286,
+          1.060912297674911,
+          1.027993697151184
+        ],
+        "linf": [
+          1.2461267908955667,
+          1.222467641329424,
+          1.196070977589545
+        ],
+        "epochs": [
+          1,
+          2,
+          3
+        ],
+        "seed": 42,
+        "data_seed": 42,
+        "model_type": "classical",
+        "parameter_count": 1297,
+        "deterministic_sampling": true,
+        "fixed_collocation": false
+      },
+      "run_dir": "outputs/benchmarks/te_qpinn/seed_42/classical_pi"
+    },
+    {
+      "run_name": "te_qpinn_surrogate_pi",
+      "label": "TE-QPINN Surrogate + PI",
+      "seed": 42,
+      "model_type": "te_qpinn_surrogate",
+      "epochs": 3,
+      "final_epoch": 3,
+      "runtime_sec": 3.2493280039634556,
+      "cpu_rss_delta_mb": 23.5390625,
+      "peak_gpu_memory_mb": 23.1494140625,
+      "parameter_count": 1102,
+      "final_loss": 88.79022198066716,
+      "final_l2": 1.76838359174758,
+      "final_linf": 1.907867003185962,
+      "best_loss": 86.96328038109147,
+      "best_loss_epoch": 1,
+      "best_l2": 1.76838359174758,
+      "best_l2_epoch": 3,
+      "best_linf": 1.907867003185962,
+      "best_linf_epoch": 3,
+      "config_source": "/root/projects/PINNs/configs/benchmark_te_qpinn_smoke_surrogate_pi.yaml",
+      "config_path": "outputs/benchmarks/te_qpinn/seed_42/te_qpinn_surrogate_pi/config.generated.yaml",
+      "history": {
+        "loss": [
+          86.96328038109147,
+          91.14984784247655,
+          88.79022198066716
+        ],
+        "l2": [
+          1.8463596931272184,
+          1.8071068774065102,
+          1.76838359174758
+        ],
+        "linf": [
+          1.9649105244468201,
+          1.9356797184205767,
+          1.907867003185962
+        ],
+        "epochs": [
+          1,
+          2,
+          3
+        ],
+        "seed": 42,
+        "data_seed": 42,
+        "model_type": "te_qpinn_surrogate",
+        "parameter_count": 1102,
+        "deterministic_sampling": true,
+        "fixed_collocation": false
+      },
+      "run_dir": "outputs/benchmarks/te_qpinn/seed_42/te_qpinn_surrogate_pi"
+    }
+  ],
+  "aggregate": {
+    "classical_pi": {
+      "label": "Classical + PI",
+      "model_type": "classical",
+      "num_runs": 1,
+      "avg_runtime_sec": 3.381838170113042,
+      "std_runtime_sec": 0.0,
+      "avg_cpu_rss_delta_mb": 881.89453125,
+      "avg_peak_gpu_memory_mb": 21.3896484375,
+      "avg_parameter_count": 1297.0,
+      "avg_final_l2": 1.027993697151184,
+      "std_final_l2": 0.0,
+      "avg_final_linf": 1.196070977589545,
+      "std_final_linf": 0.0,
+      "avg_best_l2": 1.027993697151184,
+      "avg_best_linf": 1.196070977589545,
+      "avg_final_epoch": 3.0
+    },
+    "te_qpinn_surrogate_pi": {
+      "label": "TE-QPINN Surrogate + PI",
+      "model_type": "te_qpinn_surrogate",
+      "num_runs": 1,
+      "avg_runtime_sec": 3.2493280039634556,
+      "std_runtime_sec": 0.0,
+      "avg_cpu_rss_delta_mb": 23.5390625,
+      "avg_peak_gpu_memory_mb": 23.1494140625,
+      "avg_parameter_count": 1102.0,
+      "avg_final_l2": 1.76838359174758,
+      "std_final_l2": 0.0,
+      "avg_final_linf": 1.907867003185962,
+      "std_final_linf": 0.0,
+      "avg_best_l2": 1.76838359174758,
+      "avg_best_linf": 1.907867003185962,
+      "avg_final_epoch": 3.0
+    }
+  }
+}

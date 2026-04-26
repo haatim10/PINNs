@@ -1,0 +1,52 @@
+{
+  "run_name": "te_qpinn_surrogate_pi",
+  "label": "TE-QPINN Surrogate + PI",
+  "seed": 42,
+  "model_type": "te_qpinn_surrogate",
+  "epochs": 3,
+  "final_epoch": 3,
+  "runtime_sec": 3.2493280039634556,
+  "cpu_rss_delta_mb": 23.5390625,
+  "peak_gpu_memory_mb": 23.1494140625,
+  "parameter_count": 1102,
+  "final_loss": 88.79022198066716,
+  "final_l2": 1.76838359174758,
+  "final_linf": 1.907867003185962,
+  "best_loss": 86.96328038109147,
+  "best_loss_epoch": 1,
+  "best_l2": 1.76838359174758,
+  "best_l2_epoch": 3,
+  "best_linf": 1.907867003185962,
+  "best_linf_epoch": 3,
+  "config_source": "/root/projects/PINNs/configs/benchmark_te_qpinn_smoke_surrogate_pi.yaml",
+  "config_path": "outputs/benchmarks/te_qpinn/seed_42/te_qpinn_surrogate_pi/config.generated.yaml",
+  "history": {
+    "loss": [
+      86.96328038109147,
+      91.14984784247655,
+      88.79022198066716
+    ],
+    "l2": [
+      1.8463596931272184,
+      1.8071068774065102,
+      1.76838359174758
+    ],
+    "linf": [
+      1.9649105244468201,
+      1.9356797184205767,
+      1.907867003185962
+    ],
+    "epochs": [
+      1,
+      2,
+      3
+    ],
+    "seed": 42,
+    "data_seed": 42,
+    "model_type": "te_qpinn_surrogate",
+    "parameter_count": 1102,
+    "deterministic_sampling": true,
+    "fixed_collocation": false
+  },
+  "run_dir": "outputs/benchmarks/te_qpinn/seed_42/te_qpinn_surrogate_pi"
+}

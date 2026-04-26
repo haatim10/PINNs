@@ -1,0 +1,15 @@
+# TE-QPINN Phase 3 smoke benchmark plan (config-driven, no CLI overrides)
+
+seeds: [42]
+device: auto
+output_dir: outputs/benchmarks/te_qpinn
+plots_dir: outputs/plots/te_qpinn
+report_name: benchmark_report.md
+
+runs:
+  - name: classical_pi
+    label: Classical + PI
+    config: configs/benchmark_te_qpinn_smoke_classical_pi.yaml
+  - name: te_qpinn_surrogate_pi
+    label: TE-QPINN Surrogate + PI
+    config: configs/benchmark_te_qpinn_smoke_surrogate_pi.yaml
