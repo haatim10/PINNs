@@ -5,6 +5,7 @@ This directory is the organized benchmark package for the `feature/quantum-readi
 ## What is in this folder
 
 - `JOURNAL.md`: experiment log in chronological, lab-notebook style.
+- `DASHBOARD.md`: one-page reviewer summary with key tables and figure links.
 - `figures/`: publication-oriented comparison plots copied from completed benchmark runs.
 
 ## Benchmark runs captured
