@@ -1,18 +1,51 @@
-"""Utility Functions"""
+"""Utility functions for reproducibility, config loading, and metrics."""
 
-import torch
+import random
+
 import numpy as np
+import torch
 import yaml
-from pathlib import Path
 
 
-def set_seed(seed: int):
-    """Set random seeds for reproducibility."""
-    torch.manual_seed(seed)
+def set_seed(seed: int, deterministic: bool = True):
+    """Set random seeds for reproducibility across Python, NumPy, and PyTorch."""
+    random.seed(seed)
     np.random.seed(seed)
+    torch.manual_seed(seed)
+
     if torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
+
+    if deterministic:
+        if hasattr(torch.backends, "cudnn"):
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+        torch.use_deterministic_algorithms(True, warn_only=True)
+    else:
+        if hasattr(torch.backends, "cudnn"):
+            torch.backends.cudnn.benchmark = True
+        torch.use_deterministic_algorithms(False)
+
+
+def resolve_device(requested: str | None = "auto") -> str:
+    """Resolve requested device string into an available runtime device."""
+    if requested is None:
+        requested = "auto"
+
+    requested_device = str(requested).lower()
+    if requested_device == "auto":
+        return "cuda" if torch.cuda.is_available() else "cpu"
+
+    if requested_device.startswith("cuda"):
+        return "cuda" if torch.cuda.is_available() else "cpu"
+
+    return "cpu"
+
+
+def count_trainable_parameters(model) -> int:
+    """Count trainable parameters for a model."""
+    return sum(param.numel() for param in model.parameters() if param.requires_grad)
 
 
 def exact_solution(x: torch.Tensor, t: torch.Tensor, alpha: float) -> torch.Tensor:
@@ -49,7 +82,5 @@ def load_config(config_path: str) -> dict:
 
 def get_device(config: dict) -> str:
     """Get compute device."""
-    requested = config.get('device', 'cuda')
-    if requested == 'cuda' and torch.cuda.is_available():
-        return 'cuda'
-    return 'cpu'
+    requested = config.get("device", "auto")
+    return resolve_device(requested)

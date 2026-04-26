@@ -2,6 +2,7 @@
 
 import torch
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass
@@ -25,9 +26,12 @@ class CollocationDataset:
     - Initial points for IC loss
     """
     
-    def __init__(self, mesh, N_x: int, N_collocation: int, N_boundary: int, 
+    def __init__(self, mesh, N_x: int, N_collocation: int, N_boundary: int,
                  N_initial: int, x_min: float = 0.0, x_max: float = 1.0,
-                 device: str = "cpu", seed: int = None):
+                 device: str = "cpu", seed: int = None,
+                 deterministic_sampling: bool = False,
+                 fixed_collocation: bool = False,
+                 data_seed: Optional[int] = None):
         
         self.mesh = mesh
         self.N_x = N_x
@@ -38,10 +42,20 @@ class CollocationDataset:
         self.x_min = x_min
         self.x_max = x_max
         self.device = device
-        
+        self.deterministic_sampling = deterministic_sampling
+        self.fixed_collocation = fixed_collocation
+        self.data_seed = seed if data_seed is None else data_seed
+        self._cached_batch: Optional[TrainingData] = None
+        self._generator: Optional[torch.Generator] = None
+
         if seed is not None:
             torch.manual_seed(seed)
-            
+
+        if self.deterministic_sampling:
+            generator_device = "cuda" if str(self.device).startswith("cuda") else "cpu"
+            self._generator = torch.Generator(device=generator_device)
+            self._generator.manual_seed(int(self.data_seed))
+
         self.x_grid = torch.linspace(x_min, x_max, N_x, dtype=torch.float64, device=device)
         self.t_grid = mesh.get_nodes()
         
@@ -57,44 +71,63 @@ class CollocationDataset:
         self.t_interior_flat = T.flatten()
         self.n_interior_flat = N_grid.flatten()
         self.total_interior_points = len(self.x_interior_flat)
-        
+
+    def _randperm(self, n: int) -> torch.Tensor:
+        if self._generator is None:
+            return torch.randperm(n, device=self.device)
+        return torch.randperm(n, generator=self._generator, device=self.device)
+
+    def _randint(self, low: int, high: int, size: tuple[int, ...]) -> torch.Tensor:
+        if self._generator is None:
+            return torch.randint(low, high, size, device=self.device)
+        return torch.randint(low, high, size, generator=self._generator, device=self.device)
+
     def sample_collocation_points(self):
         """Randomly sample collocation points from interior grid."""
-        indices = torch.randperm(self.total_interior_points, device=self.device)[:self.N_collocation]
-        return (self.x_interior_flat[indices], 
-                self.t_interior_flat[indices], 
+        indices = self._randperm(self.total_interior_points)[:self.N_collocation]
+        return (self.x_interior_flat[indices],
+                self.t_interior_flat[indices],
                 self.n_interior_flat[indices])
-    
+
     def get_boundary_points(self):
         """Get boundary points at x=0 and x=1."""
-        t_indices = torch.randint(1, self.N_t + 1, (self.N_boundary,), device=self.device)
+        t_indices = self._randint(1, self.N_t + 1, (self.N_boundary,))
         t = self.t_grid[t_indices]
-        
+
         x_left = torch.zeros(self.N_boundary, dtype=torch.float64, device=self.device)
         x_right = torch.ones(self.N_boundary, dtype=torch.float64, device=self.device)
-        
+
         x = torch.cat([x_left, x_right])
         t = torch.cat([t, t])
         u = torch.zeros_like(x)  # u(0,t) = u(1,t) = 0
-        
+
         return x, t, u
-    
+
     def get_initial_points(self):
         """Get initial condition points at t=0."""
-        x_indices = torch.randint(0, self.N_x, (self.N_initial,), device=self.device)
+        x_indices = self._randint(0, self.N_x, (self.N_initial,))
         x = self.x_grid[x_indices]
         t = torch.zeros(self.N_initial, dtype=torch.float64, device=self.device)
         u = torch.zeros_like(x)  # u(x,0) = 0
         return x, t, u
-    
+
     def get_training_data(self, resample_collocation: bool = True):
         """Get all training data."""
+        if self.fixed_collocation:
+            resample_collocation = False
+
+        if self._cached_batch is not None and not resample_collocation:
+            return self._cached_batch
+
         x_coll, t_coll, n_coll = self.sample_collocation_points()
         x_bc, t_bc, u_bc = self.get_boundary_points()
         x_ic, t_ic, u_ic = self.get_initial_points()
-        
-        return TrainingData(
+
+        batch = TrainingData(
             x_coll=x_coll, t_coll=t_coll, n_coll=n_coll,
             x_bc=x_bc, t_bc=t_bc, u_bc=u_bc,
             x_ic=x_ic, t_ic=t_ic, u_ic=u_ic
         )
+        if not resample_collocation:
+            self._cached_batch = batch
+        return batch

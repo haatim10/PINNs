@@ -14,7 +14,7 @@ from src.model_factory import build_model
 from src.dataset import CollocationDataset
 from src.loss import PIFMILoss
 from src.trainer import Trainer
-from src.utils import load_config, set_seed, get_device
+from src.utils import count_trainable_parameters, get_device, load_config, set_seed
 
 
 def parse_args():
@@ -33,7 +33,11 @@ def main():
     if args.epochs:
         config.setdefault('training', {})['epochs'] = args.epochs
     
-    set_seed(config.get('seed', 42))
+    repro_cfg = config.get('reproducibility', {})
+    set_seed(
+        int(config.get('seed', 42)),
+        deterministic=bool(repro_cfg.get('deterministic_torch', True))
+    )
     device = get_device(config)
     print(f"Using device: {device}")
     
@@ -54,13 +58,17 @@ def main():
     
     net = config.get('network', {})
     model = build_model(net, device=device)
-    print(f"Model parameters: {model.count_parameters()}")
+    print(f"Model parameters: {count_trainable_parameters(model)}")
     
     dataset = CollocationDataset(
         mesh=mesh, N_x=N_x, N_collocation=N_coll,
         N_boundary=disc.get('N_boundary', 50),
         N_initial=disc.get('N_initial', 50),
-        device=device, seed=config.get('seed', 42)
+        device=device,
+        seed=config.get('seed', 42),
+        deterministic_sampling=bool(repro_cfg.get('deterministic_sampling', False)),
+        fixed_collocation=bool(repro_cfg.get('fixed_collocation', False)),
+        data_seed=repro_cfg.get('data_seed'),
     )
     
     train_cfg = config.get('training', {})

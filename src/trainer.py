@@ -7,7 +7,7 @@ from tqdm import tqdm
 import time
 from pathlib import Path
 
-from .utils import compute_errors
+from .utils import compute_errors, count_trainable_parameters
 
 
 class Trainer:
@@ -47,6 +47,7 @@ class Trainer:
         self.loss_history = {'total': [], 'pde': [], 'bc': [], 'ic': []}
         self.error_history = {'l2': [], 'linf': []}
         self.eval_epochs = []
+        self.parameter_count = count_trainable_parameters(self.model)
         
         prob_config = config.get('problem', {})
         self.alpha = prob_config.get('alpha', 0.5)
@@ -71,6 +72,7 @@ class Trainer:
             'error_history': self.error_history,
             'eval_epochs': self.eval_epochs,
             'config': self.config,
+            'parameter_count': self.parameter_count,
         }
         torch.save(checkpoint, self.checkpoint_dir / f'checkpoint_epoch_{epoch}.pt')
         torch.save(checkpoint, self.checkpoint_dir / 'latest_checkpoint.pt')
@@ -114,6 +116,7 @@ class Trainer:
         print("=" * 60)
         print("Starting Training")
         print(f"Device: {self.device}")
+        print(f"Model parameters: {self.parameter_count}")
         print(f"Epochs: {self.start_epoch} to {self.epochs}")
         print(f"Checkpoints saved every {self.checkpoint_interval} epochs")
         print("=" * 60)
@@ -163,6 +166,7 @@ class Trainer:
             'loss_history': self.loss_history,
             'error_history': self.error_history,
             'eval_epochs': self.eval_epochs,
+            'parameter_count': self.parameter_count,
         }, self.checkpoint_dir / 'final_model.pt')
         
         return {
@@ -170,4 +174,5 @@ class Trainer:
             'final_linf_error': self.error_history['linf'][-1],
             'loss_history': self.loss_history,
             'error_history': self.error_history,
+            'parameter_count': self.parameter_count,
         }

@@ -21,6 +21,7 @@ import time
 import math
 import csv
 import os
+from typing import Optional
 
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -28,15 +29,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.model_factory import build_model, model_name_from_config
 from src.mesh import GradedMesh, L1Coefficients
 from src.physics_integro import IntegroDifferentialResidual, exact_solution
-
-
-def set_seed(seed: int):
-    """Set random seeds for reproducible benchmarking/training."""
-    torch.manual_seed(seed)
-    np.random.seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
+from src.utils import count_trainable_parameters, resolve_device, set_seed
 
 
 def log_l1_discretization_points(epoch, data, mesh, l1_coeffs, l1_file, alpha):
@@ -149,6 +142,17 @@ class IntegroDiffDataset:
         self.x_min = prob.get('x_min', 0.0)
         self.x_max = prob.get('x_max', 1.0)
         self.solution_cfg = prob.get('solution', {})
+        repro_cfg = config.get('reproducibility', {})
+        self.deterministic_sampling = bool(repro_cfg.get('deterministic_sampling', False))
+        self.fixed_collocation = bool(repro_cfg.get('fixed_collocation', False))
+        self.data_seed = int(repro_cfg.get('data_seed', config.get('seed', 42)))
+        self._cached_batch = None
+        self._generator: Optional[torch.Generator] = None
+
+        if self.deterministic_sampling:
+            generator_device = "cuda" if str(device).startswith("cuda") else "cpu"
+            self._generator = torch.Generator(device=generator_device)
+            self._generator.manual_seed(self.data_seed)
         
         self.x_grid = torch.linspace(self.x_min, self.x_max, self.N_x, dtype=torch.float64, device=device)
         self.t_grid = mesh.get_nodes()
@@ -165,15 +169,25 @@ class IntegroDiffDataset:
         self.t_interior = T.flatten()
         self.n_interior = N_grid.flatten()
         self.total_interior = len(self.x_interior)
-        
+
+    def _randperm(self, n: int) -> torch.Tensor:
+        if self._generator is None:
+            return torch.randperm(n, device=self.device)
+        return torch.randperm(n, generator=self._generator, device=self.device)
+
+    def _randint(self, low: int, high: int, size: tuple[int, ...]) -> torch.Tensor:
+        if self._generator is None:
+            return torch.randint(low, high, size, device=self.device)
+        return torch.randint(low, high, size, generator=self._generator, device=self.device)
+
     def sample_collocation(self):
         """Sample collocation points from interior."""
-        idx = torch.randperm(self.total_interior, device=self.device)[:self.N_collocation]
+        idx = self._randperm(self.total_interior)[:self.N_collocation]
         return self.x_interior[idx], self.t_interior[idx], self.n_interior[idx]
     
     def get_boundary_points(self):
         """Get boundary points with non-homogeneous BCs."""
-        t_idx = torch.randint(1, self.N_t + 1, (self.N_boundary,), device=self.device)
+        t_idx = self._randint(1, self.N_t + 1, (self.N_boundary,))
         t = self.t_grid[t_idx]
         
         x_left = torch.zeros(self.N_boundary, dtype=torch.float64, device=self.device)
@@ -188,7 +202,7 @@ class IntegroDiffDataset:
     
     def get_initial_points(self):
         """Get IC points: u(x,0) = 0."""
-        x_idx = torch.randint(0, self.N_x, (self.N_initial,), device=self.device)
+        x_idx = self._randint(0, self.N_x, (self.N_initial,))
         x = self.x_grid[x_idx]
         t = torch.zeros(self.N_initial, dtype=torch.float64, device=self.device)
         u = exact_solution(x, t, self.alpha, self.solution_cfg)
@@ -196,15 +210,21 @@ class IntegroDiffDataset:
     
     def get_training_data(self):
         """Get all training data."""
+        if self.fixed_collocation and self._cached_batch is not None:
+            return self._cached_batch
+
         x_coll, t_coll, n_coll = self.sample_collocation()
         x_bc, t_bc, u_bc = self.get_boundary_points()
         x_ic, t_ic, u_ic = self.get_initial_points()
-        
-        return {
+
+        batch = {
             'x_coll': x_coll, 't_coll': t_coll, 'n_coll': n_coll,
             'x_bc': x_bc, 't_bc': t_bc, 'u_bc': u_bc,
             'x_ic': x_ic, 't_ic': t_ic, 'u_ic': u_ic
         }
+        if self.fixed_collocation:
+            self._cached_batch = batch
+        return batch
 
 
 class IntegroDiffLoss:
@@ -299,14 +319,12 @@ def train(
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
 
+    repro_cfg = config.get('reproducibility', {})
     seed = int(config.get('seed', 42))
-    set_seed(seed)
-    
-    requested_device = str(config.get('device', 'cuda')).lower()
-    if requested_device == 'cuda' and torch.cuda.is_available():
-        device = 'cuda'
-    else:
-        device = 'cpu'
+    deterministic_torch = bool(repro_cfg.get('deterministic_torch', True))
+    set_seed(seed, deterministic=deterministic_torch)
+
+    device = resolve_device(config.get('device', 'auto'))
     print(f"Using device: {device}")
     
     prob = config['problem']
@@ -323,9 +341,18 @@ def train(
     x_max = prob.get('x_max', 1.0)
     t_max = prob.get('t_max', 1.0)
     mesh_grading = prob.get('mesh_grading', 2.0)
+    data_seed = int(repro_cfg.get('data_seed', seed))
+    deterministic_sampling = bool(repro_cfg.get('deterministic_sampling', False))
+    fixed_collocation = bool(repro_cfg.get('fixed_collocation', False))
     
     print(f"Problem: alpha={alpha}, beta={beta}")
     print(f"Grid: {N_x}x{N_t}, Collocation points: {disc['N_collocation']}")
+    print(
+        "Reproducibility: "
+        f"deterministic_torch={deterministic_torch}, "
+        f"deterministic_sampling={deterministic_sampling}, "
+        f"fixed_collocation={fixed_collocation}, data_seed={data_seed}"
+    )
     
     # Create mesh and L1 coefficients
     mesh = GradedMesh(N=N_t, t_max=t_max, beta=mesh_grading, device=device)
@@ -335,8 +362,9 @@ def train(
     net_cfg = config['network']
     model = build_model(net_cfg, device=device)
     model_type = model_name_from_config(net_cfg)
+    model_param_count = count_trainable_parameters(model)
     print(f"Model type: {model_type}")
-    print(f"Model parameters: {sum(p.numel() for p in model.parameters())}")
+    print(f"Model parameters: {model_param_count}")
     
     # Create dataset and loss
     dataset = IntegroDiffDataset(mesh, config, device)
@@ -395,7 +423,18 @@ def train(
         print(f"L1 discretization point tracking enabled: {l1_points_file}")
     
     # Training history
-    history = {'loss': [], 'l2': [], 'linf': [], 'epochs': []}
+    history = {
+        'loss': [],
+        'l2': [],
+        'linf': [],
+        'epochs': [],
+        'seed': seed,
+        'data_seed': data_seed,
+        'model_type': model_type,
+        'parameter_count': model_param_count,
+        'deterministic_sampling': deterministic_sampling,
+        'fixed_collocation': fixed_collocation,
+    }
     start_epoch = 1
     best_monitor = float('inf')
     plateau_epochs = 0
@@ -412,6 +451,12 @@ def train(
                 scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
             start_epoch = checkpoint['epoch'] + 1
             history = checkpoint.get('history', history)
+            history.setdefault('seed', seed)
+            history.setdefault('data_seed', data_seed)
+            history.setdefault('model_type', model_type)
+            history.setdefault('parameter_count', model_param_count)
+            history.setdefault('deterministic_sampling', deterministic_sampling)
+            history.setdefault('fixed_collocation', fixed_collocation)
             print(f"Resumed from epoch {checkpoint['epoch']}")
     
     # Training loop
@@ -610,6 +655,7 @@ def train(
         'model_state_dict': model.state_dict(),
         'history': history,
         'config': config,
+        'parameter_count': model_param_count,
         'final_l2': l2_err,
         'final_linf': linf_err
     }, checkpoint_dir / 'final_model.pt')

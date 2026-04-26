@@ -173,6 +173,11 @@ def run_single_benchmark(
         int(config["training"]["epochs"]) + 1,
         int(config["logging"].get("checkpoint_interval", 1000)),
     )
+    config.setdefault("reproducibility", {})
+    config["reproducibility"].setdefault("deterministic_torch", True)
+    config["reproducibility"]["deterministic_sampling"] = True
+    config["reproducibility"].setdefault("fixed_collocation", False)
+    config["reproducibility"].setdefault("data_seed", int(seed))
 
     run_dir = output_dir / f"seed_{seed}" / normalize_model_name(model_type)
     checkpoint_dir = run_dir / "checkpoints"
@@ -219,6 +224,10 @@ def run_single_benchmark(
     best_linf, best_linf_epoch = best_history_value(history, "linf")
     best_loss, best_loss_epoch = best_history_value(history, "loss")
     final_epoch = history["epochs"][-1] if history.get("epochs") else int(config["training"]["epochs"])
+    parameter_count = history.get("parameter_count")
+    data_seed = history.get("data_seed", config.get("reproducibility", {}).get("data_seed"))
+    deterministic_sampling = history.get("deterministic_sampling", config.get("reproducibility", {}).get("deterministic_sampling"))
+    fixed_collocation = history.get("fixed_collocation", config.get("reproducibility", {}).get("fixed_collocation"))
 
     record = {
         "seed": seed,
@@ -228,6 +237,7 @@ def run_single_benchmark(
         "estimated_runtime_sec": estimate_run_seconds(base_config, model_type, int(config["training"]["epochs"]), config.get("device", device_override)),
         "cpu_rss_delta_mb": cpu_delta_mb,
         "peak_gpu_memory_mb": peak_gpu_mb,
+        "parameter_count": parameter_count,
         "epochs": int(config["training"]["epochs"]),
         "final_epoch": final_epoch,
         "final_loss": final_loss,
@@ -239,6 +249,9 @@ def run_single_benchmark(
         "best_l2_epoch": best_l2_epoch,
         "best_linf": best_linf,
         "best_linf_epoch": best_linf_epoch,
+        "data_seed": data_seed,
+        "deterministic_sampling": deterministic_sampling,
+        "fixed_collocation": fixed_collocation,
         "history": history,
         "run_dir": str(run_dir),
         "config_path": str(config_path),
@@ -261,6 +274,7 @@ def write_summary_csv(records: List[Dict], csv_path: Path):
         "estimated_runtime_sec",
         "cpu_rss_delta_mb",
         "peak_gpu_memory_mb",
+        "parameter_count",
         "final_loss",
         "final_l2",
         "final_linf",
@@ -270,6 +284,9 @@ def write_summary_csv(records: List[Dict], csv_path: Path):
         "best_l2_epoch",
         "best_linf",
         "best_linf_epoch",
+        "data_seed",
+        "deterministic_sampling",
+        "fixed_collocation",
         "run_dir",
     ]
 
@@ -297,6 +314,8 @@ def summarize_records(records: List[Dict]) -> Dict[str, Dict]:
             "std_cpu_rss_delta_mb": safe_std(item["cpu_rss_delta_mb"] for item in items),
             "avg_peak_gpu_memory_mb": safe_mean(item["peak_gpu_memory_mb"] for item in items),
             "std_peak_gpu_memory_mb": safe_std(item["peak_gpu_memory_mb"] for item in items),
+            "avg_parameter_count": safe_mean(item["parameter_count"] for item in items),
+            "std_parameter_count": safe_std(item["parameter_count"] for item in items),
             "avg_final_loss": safe_mean(item["final_loss"] for item in items),
             "std_final_loss": safe_std(item["final_loss"] for item in items),
             "avg_final_l2": safe_mean(item["final_l2"] for item in items),
@@ -505,14 +524,15 @@ def write_markdown_report(
         "",
         "## Summary",
         "",
-        "| Model | Runs | Runtime (s) | Final L2 | Final Linf | Peak GPU MB |",
-        "| --- | ---: | ---: | ---: | ---: | ---: |",
+        "| Model | Runs | Runtime (s) | Params | Final L2 | Final Linf | Peak GPU MB |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
 
     for model in model_order:
         row = summary[model]
         lines.append(
             f"| {make_variant_label(model)} | {row['num_runs']} | {fmt(row['avg_runtime_sec'])} ± {fmt(row['std_runtime_sec'])} | "
+            f"{fmt(row.get('avg_parameter_count'), precision=1)} | "
             f"{fmt(row['avg_final_l2'])} ± {fmt(row['std_final_l2'])} | {fmt(row['avg_final_linf'])} ± {fmt(row['std_final_linf'])} | {fmt(row['avg_peak_gpu_memory_mb'])} |"
         )
 
