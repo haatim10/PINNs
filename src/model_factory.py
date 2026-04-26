@@ -4,6 +4,7 @@ from typing import Dict
 
 from .model import PINN
 from .quantum_ready_model import QuantumReadyPINN
+from .te_qpinn_surrogate_model import TEQPINNSurrogatePINN
 
 
 def build_model(network_config: Dict, device: str = "cpu"):
@@ -13,6 +14,8 @@ def build_model(network_config: Dict, device: str = "cpu"):
     - classical (default)
     - quantum_ready
     - hybrid_quantum (alias for quantum_ready)
+    - te_qpinn_surrogate
+    - te_qpinn (alias for te_qpinn_surrogate)
     """
     if network_config is None:
         network_config = {}
@@ -36,9 +39,15 @@ def build_model(network_config: Dict, device: str = "cpu"):
             quantum=network_config.get("quantum", {}),
         )
 
+    if model_type in {"te_qpinn_surrogate", "te_qpinn", "teqpinn", "te-qpinn"}:
+        return TEQPINNSurrogatePINN(
+            **common_kwargs,
+            te_qpinn=network_config.get("te_qpinn", {}),
+        )
+
     raise ValueError(
         f"Unsupported model_type '{model_type}'. "
-        "Use one of: classical, quantum_ready, hybrid_quantum."
+        "Use one of: classical, quantum_ready, hybrid_quantum, te_qpinn_surrogate, te_qpinn."
     )
 
 
@@ -50,4 +59,6 @@ def model_name_from_config(network_config: Dict) -> str:
     model_type = str(network_config.get("model_type", "classical")).lower()
     if model_type in {"hybrid_quantum", "qready"}:
         return "quantum_ready"
+    if model_type in {"te_qpinn", "teqpinn", "te-qpinn"}:
+        return "te_qpinn_surrogate"
     return model_type
