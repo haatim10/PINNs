@@ -1,8 +1,48 @@
 # PI-fMI: Physics-Informed Neural Networks for Fractional Integro-Differential Equations
 
-**`feature/quantum-readiness` branch:** Quantum-ready PINN benchmark branch with a configurable classical baseline, a quantum-inspired hybrid model, and a faster matched-budget comparison suite.
+**`feature/quantum-readiness` branch:** This branch preserves the classical PINN plus product-integration workflow for a time-fractional integro-differential equation, and adds a TE-QPINN-inspired surrogate model for controlled comparisons on the same PDE.
 
-This branch keeps the integro-differential solver available as the reference workload, but the main focus is the quantum-ready model path, benchmark reporting, and oscillatory test cases.
+## At a Glance: Governing Problem
+
+We solve:
+
+$$D_t^{\alpha} u(x,t) - (x^2 + 1)\frac{\partial^2 u}{\partial x^2} + \int_0^t \sin(x)(t-s)^{-\beta}u(x,s)\,ds = f(x,t)$$
+
+- Domain: $x \in [0,1]$, $t \in (0,1]$
+- Boundary conditions:
+  - $u(0,t) = t^{\alpha}$
+  - $u(1,t) = -t^{\alpha}$
+- Initial condition:
+  - $u(x,0) = 0$
+
+Baseline method: a classical physics-informed neural network (PINN), with product-integration logic for the weakly singular history integral in the fractional integro-differential setting.
+
+This branch adds a TE-QPINN-inspired surrogate to test whether quantum-inspired feature embeddings can improve performance on this same problem setup.
+
+## Quantum-Inspired Extension: TE-QPINN Surrogate
+
+The TE-QPINN surrogate implementation includes:
+
+- trainable embedding network
+- input rescaling
+- angle-style embedding
+- sin/cos quantum-inspired features
+- entanglement-inspired pairwise mixing
+- expectation-style readout
+- optional residual correction
+
+Important scope note: this is a quantum-inspired surrogate in PyTorch. It is not a claim of quantum advantage without an actual simulator or hardware-backed quantum circuit path.
+
+## Final 50x50 Single-Seed Benchmark
+
+Matched setup: Adam-only, 12 epochs, seed 42, same fractional PI problem.
+
+| Variant | Params | Runtime (s) | Final Loss | Final L2 | Final Linf |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Classical + PI | 2241 | 16.41 | 62.2103 | 1.00381 | 1.08578 |
+| TE-QPINN Surrogate + PI | 2306 | 43.83 | 71.4435 | 0.88684 | 0.94618 |
+
+Interpretation: TE-QPINN improved L2 and Linf on this single-seed benchmark, with closely matched parameter count, but it was slower. This is promising but preliminary until validated across multiple seeds.
 
 ## Branch Navigation (Quantum-Readiness)
 
@@ -10,33 +50,49 @@ This branch keeps the integro-differential solver available as the reference wor
 - Journal-style experiment log: `docs/quantum-readiness/JOURNAL.md`
 - Checked-in comparison plots: `docs/quantum-readiness/figures/`
 - Generated run artifacts (local): `outputs/benchmarks/`
+- Final benchmark interpretation: `docs/te_qpinn_benchmark_analysis.md`
 
-## Quantum-Ready Benchmark Suite
+## Quick Commands
 
-Run the benchmark from the terminal with one of the preset configs:
+Run tests:
 
 ```bash
-python scripts/benchmark_quantum_ready.py --config configs/benchmark_quantum_ready.yaml
-python scripts/benchmark_quantum_ready.py --config configs/benchmark_quantum_ready_medium.yaml
-python scripts/benchmark_quantum_ready.py --config configs/benchmark_quantum_ready_harder.yaml
+pytest -q
 ```
 
-Each run writes `benchmark_results.json`, `benchmark_summary.csv`, `benchmark_aggregate.json`, publication-style plots, and `benchmark_report.md` under the requested benchmark output directory inside `outputs/benchmarks/`.
+Run TE-QPINN smoke benchmark:
+
+```bash
+python scripts/benchmark_te_qpinn.py --benchmark-config configs/benchmark_te_qpinn_smoke.yaml
+```
+
+Run TE-QPINN 50x50 benchmark:
+
+```bash
+python scripts/benchmark_te_qpinn.py --benchmark-config configs/benchmark_te_qpinn_50.yaml
+```
+
+Detailed benchmark analysis:
+- `docs/te_qpinn_benchmark_analysis.md`
 
 ---
 
 ## Table of Contents
-1. [Problem Formulation](#problem-formulation)
-2. [Results](#results)
-3. [Mathematical Background](#mathematical-background)
-4. [The L1 Discretization Scheme](#the-l1-discretization-scheme)
-5. [Graded Mesh Construction](#graded-mesh-construction)
-6. [Collocation Point Selection](#collocation-point-selection)
-7. [Integral Term Approximation](#integral-term-approximation)
-8. [Implementation Details](#implementation-details)
-9. [Neural Network Architecture](#neural-network-architecture)
-10. [Training Methodology](#training-methodology)
-11. [Usage](#usage)
+1. [At a Glance: Governing Problem](#at-a-glance-governing-problem)
+2. [Quantum-Inspired Extension: TE-QPINN Surrogate](#quantum-inspired-extension-te-qpinn-surrogate)
+3. [Final 50x50 Single-Seed Benchmark](#final-50x50-single-seed-benchmark)
+4. [Quick Commands](#quick-commands)
+5. [Problem Formulation](#problem-formulation)
+6. [Results](#results)
+7. [Mathematical Background](#mathematical-background)
+8. [The L1 Discretization Scheme](#the-l1-discretization-scheme)
+9. [Graded Mesh Construction](#graded-mesh-construction)
+10. [Collocation Point Selection](#collocation-point-selection)
+11. [Integral Term Approximation](#integral-term-approximation)
+12. [Implementation Details](#implementation-details)
+13. [Neural Network Architecture](#neural-network-architecture)
+14. [Training Methodology](#training-methodology)
+15. [Usage](#usage)
 
 ---
 
