@@ -84,6 +84,47 @@ Interpretation:
 - TE LayerNorm achieved the strongest seed-42 accuracy, with high runtime cost.
 - This indicates strong optimizer sensitivity and high-accuracy potential on TE variants.
 
+### C) Memory-Aware TE-QPINN Smoke (Seed 42 Only)
+
+| Variant | Params | Runtime (s) | Final Loss | Final L2 | Final Linf |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Classical + PI | 2241 | 17.3504 | 62.2103 | 1.00381 | 1.08578 |
+| Classical + PI + analytic memory | 2433 | 18.3400 | 62.3695 | 0.92487 | 0.83902 |
+| TE fixed residual 0.10 + PI | 2306 | 44.6783 | 71.4435 | 0.88684 | 0.94618 |
+| TE LayerNorm post_quantum + PI | 2338 | 47.2960 | 54.0574 | 0.82390 | 0.95765 |
+| TE memory-aware analytic + PI | 2498 | 47.3314 | 37.0430 | 0.68147 | 0.95543 |
+| TE memory-aware analytic + LayerNorm post_quantum + PI | 2530 | 49.8322 | 45.7305 | 0.69897 | 0.81093 |
+
+Interpretation:
+
+- Memory-aware TE looks promising on seed 42 (notably L2 and loss).
+- Classical + memory-feature control also improves strongly, so gains may partly come from feature engineering.
+- This is **smoke-only** evidence; no general claim is made until multi-seed validation is run.
+
+### D) Memory-Aware TE-QPINN Locked 5-Seed Validation (Seeds 0..4)
+
+| Variant | Final L2 (mean ± std) | Final Linf (mean ± std) | Final Loss (mean ± std) | Runtime (s, mean ± std) | Params |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Classical + PI | 0.916583 ± 0.058399 | 1.061336 ± 0.107421 | 43.197057 ± 10.514407 | 14.8572 ± 1.8966 | 2241 |
+| Classical + PI + analytic memory | 0.761948 ± 0.244735 | 0.848289 ± 0.300985 | 37.475642 ± 16.982665 | 17.0129 ± 0.9201 | 2433 |
+| TE LayerNorm post_quantum + PI (best non-memory TE) | 0.962204 ± 0.084977 | 1.104512 ± 0.116844 | 43.598615 ± 8.919407 | 44.0333 ± 3.2133 | 2338 |
+| TE memory-aware analytic + PI | 0.889161 ± 0.187862 | 1.065903 ± 0.269021 | 35.705541 ± 8.592595 | 44.0522 ± 3.2268 | 2498 |
+
+Interpretation:
+
+- Memory-aware TE improves over best non-memory TE on mean L2 and mean loss.
+- Classical + memory control is still stronger on mean L2/Linf, so TE-specific memory advantage is not yet proven.
+- This supports continuing memory-aware work, but with strict fairness controls and confirmatory multi-seed follow-up.
+
+## Key Figures
+
+Curated plots are collected in: `outputs/plots/key_results/`
+
+![Optimizer Sensitivity Summary](outputs/plots/key_results/optimizer_sensitivity_summary.png)
+![LayerNorm Multi-Seed Summary](outputs/plots/key_results/layernorm_multiseed_summary.png)
+![Memory Multiseed Summary](outputs/plots/key_results/memory_multiseed_summary.png)
+![Best TE vs Classical Error Heatmap](outputs/plots/key_results/best_te_vs_classical_error_heatmap.png)
+
 ## Experiment Timeline (Completed Phases)
 
 - [x] TE-QPINN surrogate implemented
@@ -98,6 +139,8 @@ Interpretation:
 - [x] learned gated residual tested
 - [x] post-quantum LayerNorm tested
 - [x] optimizer sensitivity study completed
+- [x] memory-aware analytic smoke completed
+- [x] memory-aware analytic 5-seed validation completed
 
 ## How To Run
 
@@ -131,15 +174,33 @@ Optimizer sensitivity:
 python scripts/benchmark_te_qpinn.py --benchmark-config configs/benchmark_te_qpinn_optimizer_sensitivity.yaml --resume-incomplete
 ```
 
+Memory-aware smoke (Phase 8C):
+
+```bash
+python scripts/benchmark_te_qpinn.py --benchmark-config configs/benchmark_te_qpinn_memory_smoke.yaml
+```
+
+Memory-aware multi-seed (Phase 8D):
+
+```bash
+python scripts/benchmark_te_qpinn.py --benchmark-config configs/benchmark_te_qpinn_memory_multiseed.yaml --resume-incomplete
+```
+
 ## Output / Artifact Index
 
 - `outputs/benchmarks/te_qpinn_multiseed/`
 - `outputs/benchmarks/te_qpinn_layernorm_multiseed/`
 - `outputs/benchmarks/te_qpinn_optimizer_sensitivity/`
+- `outputs/benchmarks/te_qpinn_memory_smoke/`
+- `outputs/benchmarks/te_qpinn_memory_multiseed/`
 - `outputs/plots/te_qpinn_multiseed/`
 - `outputs/plots/te_qpinn_layernorm_multiseed/`
 - `outputs/plots/te_qpinn_optimizer_sensitivity/`
+- `outputs/plots/te_qpinn_memory_smoke/`
+- `outputs/plots/te_qpinn_memory_multiseed/`
+- `outputs/plots/key_results/`
 - `docs/te_qpinn_benchmark_analysis.md`
+- `docs/te_qpinn_memory_aware_plan.md`
 
 ## Current Interpretation
 
@@ -148,7 +209,8 @@ python scripts/benchmark_te_qpinn.py --benchmark-config configs/benchmark_te_qpi
 - LayerNorm improves TE-side stability and mean TE performance vs fixed TE.
 - LBFGS significantly improves accuracy for all variants, especially TE LayerNorm.
 - Runtime cost is a major limitation for LBFGS-based high-accuracy runs.
-- Additional evidence is needed before any TE-QPINN superiority claim.
+- Memory-aware TE improves over non-memory TE on mean L2/loss in 5-seed testing, but still trails Classical + memory control on mean L2/Linf.
+- Current evidence supports memory feature usefulness; a distinct TE-architecture advantage is not yet confirmed.
 
 ## Next Steps
 
@@ -164,4 +226,6 @@ python scripts/benchmark_te_qpinn.py --benchmark-config configs/benchmark_te_qpi
 ---
 
 For full quantitative detail, phase-by-phase interpretation, and caveats, see:
-`docs/te_qpinn_benchmark_analysis.md`.
+- `docs/te_qpinn_benchmark_analysis.md`
+- `docs/te_qpinn_memory_aware_plan.md`
+- `outputs/plots/key_results/README.md`

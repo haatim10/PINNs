@@ -38,6 +38,18 @@ def _base_config(model_type: str = "te_qpinn_surrogate", te_overrides: dict | No
     return config
 
 
+def _problem_config() -> dict:
+    return {
+        "type": "integro_differential",
+        "alpha": 0.5,
+        "beta": 0.5,
+        "x_min": 0.0,
+        "x_max": 1.0,
+        "t_min": 0.0,
+        "t_max": 1.0,
+    }
+
+
 def test_model_factory_routes_te_qpinn_surrogate():
     model = build_model(_base_config("te_qpinn_surrogate"), device="cpu")
     assert isinstance(model, TEQPINNSurrogatePINN)
@@ -345,3 +357,134 @@ def test_layernorm_parameter_count_delta_is_small_and_positive():
         feature_dim += ln_model.n_qubits - 1
     expected_delta = 2 * feature_dim  # LayerNorm weight + bias
     assert ln_count == fixed_count + expected_delta
+
+
+def test_te_memory_aware_forward_pass_works():
+    config = _base_config()
+    config.update(
+        {
+            "memory_features": "analytic",
+            "memory_feature_set": "basic_fractional",
+            "memory_feature_normalization": "scale",
+            "memory_epsilon": 1e-8,
+        }
+    )
+    model = build_model(config, device="cpu", problem_config=_problem_config())
+
+    x = torch.linspace(0.0, 1.0, 9, dtype=torch.float64)
+    t = torch.linspace(0.0, 1.0, 9, dtype=torch.float64)
+    y = model(x, t)
+    assert y.shape == (9, 1)
+    assert y.dtype == torch.float64
+    assert model.feature_input_dim == 8
+
+
+def test_te_memory_aware_backward_pass_works():
+    config = _base_config()
+    config.update(
+        {
+            "memory_features": "analytic",
+            "memory_feature_set": "basic_fractional",
+            "memory_feature_normalization": "scale",
+        }
+    )
+    model = build_model(config, device="cpu", problem_config=_problem_config())
+    x = torch.linspace(0.0, 1.0, 10, dtype=torch.float64, requires_grad=True)
+    t = torch.linspace(0.0, 1.0, 10, dtype=torch.float64, requires_grad=True)
+    loss = model(x, t).pow(2).mean()
+    loss.backward()
+
+    assert x.grad is not None
+    assert t.grad is not None
+    assert torch.isfinite(x.grad).all()
+    assert torch.isfinite(t.grad).all()
+
+
+def test_te_memory_aware_layernorm_post_quantum_works():
+    config = _base_config(
+        te_overrides={
+            "feature_norm": "layernorm",
+            "feature_norm_position": "post_quantum",
+        }
+    )
+    config.update(
+        {
+            "memory_features": "analytic",
+            "memory_feature_set": "basic_fractional",
+            "memory_feature_normalization": "scale",
+        }
+    )
+    model = build_model(config, device="cpu", problem_config=_problem_config())
+    x = torch.linspace(0.0, 1.0, 6, dtype=torch.float64)
+    t = torch.linspace(0.0, 1.0, 6, dtype=torch.float64)
+    y = model(x, t)
+    assert y.shape == (6, 1)
+    assert model.quantum_feature_norm is not None
+
+
+def test_memory_features_none_preserves_old_te_behavior():
+    config = _base_config(
+        te_overrides={
+            "residual_blend_mode": "fixed",
+            "residual_connection": True,
+            "residual_scale": 0.25,
+        }
+    )
+    config.update(
+        {
+            "memory_features": "none",
+            "memory_feature_set": "basic_fractional",
+            "memory_feature_normalization": "scale",
+        }
+    )
+    model = build_model(config, device="cpu", problem_config=_problem_config())
+
+    x = torch.linspace(0.0, 1.0, 7, dtype=torch.float64)
+    t = torch.linspace(0.0, 1.0, 7, dtype=torch.float64)
+    with torch.no_grad():
+        embedding = model.compute_embedding(x, t)
+        theta = embedding["theta"]
+        scaled_inputs = embedding["inputs_scaled"]
+        q_features = model._build_quantum_features(theta)
+        latent = model.variational(q_features)
+        expectation = model._apply_expectation_activation(model.expectation_head(latent))
+        quantum_output = model.readout(expectation)
+        residual_output = model.residual_branch(scaled_inputs)
+        expected = quantum_output + model.residual_scale * residual_output
+        actual = model(x, t)
+
+    assert model.feature_input_dim == 2
+    assert torch.allclose(actual, expected, atol=1e-10, rtol=1e-10)
+
+
+def test_model_factory_instantiates_memory_aware_te_config():
+    config = _base_config()
+    config.update(
+        {
+            "memory_features": "analytic",
+            "memory_feature_set": "basic_fractional",
+            "memory_feature_normalization": "scale",
+        }
+    )
+    model = build_model(config, device="cpu", problem_config=_problem_config())
+    assert isinstance(model, TEQPINNSurrogatePINN)
+    assert model.feature_input_dim == 8
+
+
+def test_memory_feature_parameter_count_is_computed():
+    base_model = build_model(_base_config(), device="cpu")
+    memory_cfg = _base_config()
+    memory_cfg.update(
+        {
+            "memory_features": "analytic",
+            "memory_feature_set": "basic_fractional",
+            "memory_feature_normalization": "scale",
+        }
+    )
+    memory_model = build_model(memory_cfg, device="cpu", problem_config=_problem_config())
+
+    base_count = base_model.count_parameters()
+    memory_count = memory_model.count_parameters()
+    assert memory_count > 0
+    assert memory_count == sum(p.numel() for p in memory_model.parameters() if p.requires_grad)
+    assert memory_count != base_count

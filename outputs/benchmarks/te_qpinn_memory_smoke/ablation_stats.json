@@ -1,0 +1,357 @@
+{
+  "benchmark_config": "configs/benchmark_te_qpinn_memory_smoke.yaml",
+  "reference_runs": {
+    "classical": "classical_pi",
+    "full_te": "te_fixed_pi"
+  },
+  "rows": [
+    {
+      "run_name": "classical_pi",
+      "label": "Classical + PI",
+      "model_type": "classical",
+      "mean_final_l2": 1.003809688984002,
+      "std_final_l2": 0.0,
+      "mean_final_linf": 1.0857765110148836,
+      "std_final_linf": 0.0,
+      "mean_final_loss": 62.2103007337165,
+      "std_final_loss": 0.0,
+      "mean_runtime_sec": 17.350424939999357,
+      "std_runtime_sec": 0.0,
+      "mean_parameter_count": 2241.0,
+      "vs_full_te": {
+        "avg_final_l2": {
+          "delta": 0.11696808498818512,
+          "status": "worsens"
+        },
+        "avg_final_linf": {
+          "delta": 0.1395960101218604,
+          "status": "worsens"
+        },
+        "avg_final_loss": {
+          "delta": -9.23321299871818,
+          "status": "improves"
+        },
+        "avg_runtime_sec": {
+          "delta": -27.3278655000031,
+          "status": "improves"
+        },
+        "avg_parameter_count": {
+          "delta": -65.0,
+          "status": "improves"
+        }
+      },
+      "vs_classical": {
+        "avg_final_l2": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_final_linf": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_final_loss": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_runtime_sec": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_parameter_count": {
+          "delta": 0.0,
+          "status": "neutral"
+        }
+      }
+    },
+    {
+      "run_name": "classical_memory_pi",
+      "label": "Classical + PI + analytic memory",
+      "model_type": "classical",
+      "mean_final_l2": 0.924866539547049,
+      "std_final_l2": 0.0,
+      "mean_final_linf": 0.8390238560321992,
+      "std_final_linf": 0.0,
+      "mean_final_loss": 62.36948363949619,
+      "std_final_loss": 0.0,
+      "mean_runtime_sec": 18.34001177805476,
+      "std_runtime_sec": 0.0,
+      "mean_parameter_count": 2433.0,
+      "vs_full_te": {
+        "avg_final_l2": {
+          "delta": 0.0380249355512321,
+          "status": "worsens"
+        },
+        "avg_final_linf": {
+          "delta": -0.10715664486082399,
+          "status": "improves"
+        },
+        "avg_final_loss": {
+          "delta": -9.074030092938493,
+          "status": "improves"
+        },
+        "avg_runtime_sec": {
+          "delta": -26.338278661947697,
+          "status": "improves"
+        },
+        "avg_parameter_count": {
+          "delta": 127.0,
+          "status": "worsens"
+        }
+      },
+      "vs_classical": {
+        "avg_final_l2": {
+          "delta": -0.07894314943695302,
+          "status": "improves"
+        },
+        "avg_final_linf": {
+          "delta": -0.2467526549826844,
+          "status": "improves"
+        },
+        "avg_final_loss": {
+          "delta": 0.1591829057796872,
+          "status": "worsens"
+        },
+        "avg_runtime_sec": {
+          "delta": 0.989586838055402,
+          "status": "worsens"
+        },
+        "avg_parameter_count": {
+          "delta": 192.0,
+          "status": "worsens"
+        }
+      }
+    },
+    {
+      "run_name": "te_fixed_pi",
+      "label": "TE fixed residual 0.10 + PI",
+      "model_type": "te_qpinn_surrogate",
+      "mean_final_l2": 0.8868416039958169,
+      "std_final_l2": 0.0,
+      "mean_final_linf": 0.9461805008930232,
+      "std_final_linf": 0.0,
+      "mean_final_loss": 71.44351373243468,
+      "std_final_loss": 0.0,
+      "mean_runtime_sec": 44.678290440002456,
+      "std_runtime_sec": 0.0,
+      "mean_parameter_count": 2306.0,
+      "vs_full_te": {
+        "avg_final_l2": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_final_linf": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_final_loss": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_runtime_sec": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_parameter_count": {
+          "delta": 0.0,
+          "status": "neutral"
+        }
+      },
+      "vs_classical": {
+        "avg_final_l2": {
+          "delta": -0.11696808498818512,
+          "status": "improves"
+        },
+        "avg_final_linf": {
+          "delta": -0.1395960101218604,
+          "status": "improves"
+        },
+        "avg_final_loss": {
+          "delta": 9.23321299871818,
+          "status": "worsens"
+        },
+        "avg_runtime_sec": {
+          "delta": 27.3278655000031,
+          "status": "worsens"
+        },
+        "avg_parameter_count": {
+          "delta": 65.0,
+          "status": "worsens"
+        }
+      }
+    },
+    {
+      "run_name": "te_layernorm_post_quantum_pi",
+      "label": "TE LayerNorm post_quantum + PI",
+      "model_type": "te_qpinn_surrogate",
+      "mean_final_l2": 0.8239010943836619,
+      "std_final_l2": 0.0,
+      "mean_final_linf": 0.9576463939619246,
+      "std_final_linf": 0.0,
+      "mean_final_loss": 54.0574409350246,
+      "std_final_loss": 0.0,
+      "mean_runtime_sec": 47.29599477304146,
+      "std_runtime_sec": 0.0,
+      "mean_parameter_count": 2338.0,
+      "vs_full_te": {
+        "avg_final_l2": {
+          "delta": -0.06294050961215503,
+          "status": "improves"
+        },
+        "avg_final_linf": {
+          "delta": 0.011465893068901445,
+          "status": "worsens"
+        },
+        "avg_final_loss": {
+          "delta": -17.38607279741008,
+          "status": "improves"
+        },
+        "avg_runtime_sec": {
+          "delta": 2.6177043330390006,
+          "status": "worsens"
+        },
+        "avg_parameter_count": {
+          "delta": 32.0,
+          "status": "worsens"
+        }
+      },
+      "vs_classical": {
+        "avg_final_l2": {
+          "delta": -0.17990859460034014,
+          "status": "improves"
+        },
+        "avg_final_linf": {
+          "delta": -0.12813011705295896,
+          "status": "improves"
+        },
+        "avg_final_loss": {
+          "delta": -8.1528597986919,
+          "status": "improves"
+        },
+        "avg_runtime_sec": {
+          "delta": 29.9455698330421,
+          "status": "worsens"
+        },
+        "avg_parameter_count": {
+          "delta": 97.0,
+          "status": "worsens"
+        }
+      }
+    },
+    {
+      "run_name": "te_memory_analytic_pi",
+      "label": "TE memory-aware analytic + PI",
+      "model_type": "te_qpinn_surrogate",
+      "mean_final_l2": 0.6814742166131129,
+      "std_final_l2": 0.0,
+      "mean_final_linf": 0.9554314362691406,
+      "std_final_linf": 0.0,
+      "mean_final_loss": 37.04299977297922,
+      "std_final_loss": 0.0,
+      "mean_runtime_sec": 47.331410449929535,
+      "std_runtime_sec": 0.0,
+      "mean_parameter_count": 2498.0,
+      "vs_full_te": {
+        "avg_final_l2": {
+          "delta": -0.205367387382704,
+          "status": "improves"
+        },
+        "avg_final_linf": {
+          "delta": 0.00925093537611743,
+          "status": "worsens"
+        },
+        "avg_final_loss": {
+          "delta": -34.40051395945546,
+          "status": "improves"
+        },
+        "avg_runtime_sec": {
+          "delta": 2.653120009927079,
+          "status": "worsens"
+        },
+        "avg_parameter_count": {
+          "delta": 192.0,
+          "status": "worsens"
+        }
+      },
+      "vs_classical": {
+        "avg_final_l2": {
+          "delta": -0.3223354723708891,
+          "status": "improves"
+        },
+        "avg_final_linf": {
+          "delta": -0.13034507474574297,
+          "status": "improves"
+        },
+        "avg_final_loss": {
+          "delta": -25.16730096073728,
+          "status": "improves"
+        },
+        "avg_runtime_sec": {
+          "delta": 29.98098550993018,
+          "status": "worsens"
+        },
+        "avg_parameter_count": {
+          "delta": 257.0,
+          "status": "worsens"
+        }
+      }
+    },
+    {
+      "run_name": "te_memory_analytic_layernorm_pi",
+      "label": "TE memory-aware analytic + LayerNorm post_quantum + PI",
+      "model_type": "te_qpinn_surrogate",
+      "mean_final_l2": 0.698970695496415,
+      "std_final_l2": 0.0,
+      "mean_final_linf": 0.8109300024671914,
+      "std_final_linf": 0.0,
+      "mean_final_loss": 45.730464640725664,
+      "std_final_loss": 0.0,
+      "mean_runtime_sec": 49.83218563790433,
+      "std_runtime_sec": 0.0,
+      "mean_parameter_count": 2530.0,
+      "vs_full_te": {
+        "avg_final_l2": {
+          "delta": -0.1878709084994019,
+          "status": "improves"
+        },
+        "avg_final_linf": {
+          "delta": -0.1352504984258318,
+          "status": "improves"
+        },
+        "avg_final_loss": {
+          "delta": -25.713049091709017,
+          "status": "improves"
+        },
+        "avg_runtime_sec": {
+          "delta": 5.153895197901875,
+          "status": "worsens"
+        },
+        "avg_parameter_count": {
+          "delta": 224.0,
+          "status": "worsens"
+        }
+      },
+      "vs_classical": {
+        "avg_final_l2": {
+          "delta": -0.30483899348758703,
+          "status": "improves"
+        },
+        "avg_final_linf": {
+          "delta": -0.2748465085476922,
+          "status": "improves"
+        },
+        "avg_final_loss": {
+          "delta": -16.479836092990837,
+          "status": "improves"
+        },
+        "avg_runtime_sec": {
+          "delta": 32.481760697904974,
+          "status": "worsens"
+        },
+        "avg_parameter_count": {
+          "delta": 289.0,
+          "status": "worsens"
+        }
+      }
+    }
+  ]
+}

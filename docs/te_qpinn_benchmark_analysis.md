@@ -266,3 +266,108 @@ using `configs/benchmark_te_qpinn_optimizer_sensitivity.yaml`.
 2. This is not an equal-budget comparison. The Adam+LBFGS results should be interpreted strictly as extended-optimization outcomes.
 3. TE variants, especially TE LayerNorm post-quantum, show larger relative gains than classical in this seed-42 study, which suggests stronger optimizer sensitivity.
 4. These results are promising for optimizer-aware TE training strategy, but they are still single-seed evidence and should not be used to claim final superiority.
+
+## 15. Memory-Aware TE-QPINN Smoke Test (Phase 8C)
+
+A new seed-42 smoke benchmark was run (`configs/benchmark_te_qpinn_memory_smoke.yaml`) to test the first low-risk analytic memory-feature extension.
+
+Compared variants:
+
+1. Classical + PI
+2. Classical + PI + analytic memory features (fairness control)
+3. TE fixed residual 0.10 + PI
+4. TE LayerNorm post_quantum + PI
+5. TE memory-aware analytic + PI
+6. TE memory-aware analytic + LayerNorm post_quantum + PI
+
+### Seed-42 smoke results
+
+| Variant | Params | Runtime (s) | Final Loss | Final L2 | Final Linf |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Classical + PI | 2241 | 17.3504 | 62.2103 | 1.00381 | 1.08578 |
+| Classical + PI + analytic memory | 2433 | 18.3400 | 62.3695 | 0.92487 | 0.83902 |
+| TE fixed residual 0.10 + PI | 2306 | 44.6783 | 71.4435 | 0.88684 | 0.94618 |
+| TE LayerNorm post_quantum + PI | 2338 | 47.2960 | 54.0574 | 0.82390 | 0.95765 |
+| TE memory-aware analytic + PI | 2498 | 47.3314 | 37.0430 | 0.68147 | 0.95543 |
+| TE memory-aware analytic + LayerNorm post_quantum + PI | 2530 | 49.8322 | 45.7305 | 0.69897 | 0.81093 |
+
+### Interpretation (smoke only)
+
+1. Using the best non-memory TE reference by L2 (TE LayerNorm post_quantum, L2 `0.82390`), both memory-aware TE variants improved final L2 by more than 2%:
+   - TE memory analytic: `0.68147` (about `17.3%` lower).
+   - TE memory analytic + LayerNorm: `0.69897` (about `15.2%` lower).
+2. TE memory analytic + LayerNorm also improved final Linf strongly (`0.81093`), while TE memory analytic had similar Linf to non-memory TE (`0.95543` vs `0.95765` in this reference).
+3. However, the Classical + memory-feature control also improved markedly versus Classical baseline (notably L2 and Linf), which means part of the gain may come from the analytic memory features themselves, not uniquely from TE architecture.
+4. Memory-aware TE variants use more parameters and similar/slightly higher runtime than non-memory TE, so fairness interpretation must continue to include parameter and runtime context.
+5. This is single-seed evidence only and should not be treated as generalized performance.
+
+### Go / no-go outcome
+
+Under the Phase 8B smoke gate, memory-aware TE **passes** the threshold for proceeding to 5-seed validation (it exceeds the required >=2% improvement criterion on final L2 versus best non-memory TE in seed 42).  
+Next step should be locked multi-seed validation before any stronger claim.
+
+## 16. Memory-Aware TE-QPINN Five-Seed Validation (Phase 8D)
+
+A locked 5-seed validation was completed with no retuning (`configs/benchmark_te_qpinn_memory_multiseed.yaml`, seeds `[0,1,2,3,4]`) using:
+
+1. Classical + PI
+2. Classical + PI + analytic memory (fairness control)
+3. TE fixed residual 0.10 + PI (local-coordinate baseline)
+4. TE LayerNorm post_quantum + PI (best non-memory TE reference)
+5. TE memory-aware analytic + PI
+6. TE memory-aware analytic + LayerNorm post_quantum + PI
+
+### Aggregate results
+
+| Variant | Mean Final L2 | Std L2 | Mean Final Linf | Std Linf | Mean Final Loss | Std Loss | Mean Runtime (s) | Std Runtime (s) | Params |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Classical + PI | 0.916583 | 0.058399 | 1.061336 | 0.107421 | 43.197057 | 10.514407 | 14.8572 | 1.8966 | 2241 |
+| Classical + PI + analytic memory | 0.761948 | 0.244735 | 0.848289 | 0.300985 | 37.475642 | 16.982665 | 17.0129 | 0.9201 | 2433 |
+| TE fixed residual 0.10 + PI | 0.991693 | 0.080669 | 1.107482 | 0.087500 | 48.784985 | 9.389905 | 42.8147 | 3.1725 | 2306 |
+| TE LayerNorm post_quantum + PI | 0.962204 | 0.084977 | 1.104512 | 0.116844 | 43.598615 | 8.919407 | 44.0333 | 3.2133 | 2338 |
+| TE memory-aware analytic + PI | 0.889161 | 0.187862 | 1.065903 | 0.269021 | 35.705541 | 8.592595 | 44.0522 | 3.2268 | 2498 |
+| TE memory-aware analytic + LayerNorm post_quantum + PI | 1.049739 | 0.505995 | 1.282558 | 0.374665 | 49.070580 | 43.580305 | 46.3956 | 3.3134 | 2530 |
+
+### Requested win counts
+
+- TE memory vs best non-memory TE (TE LayerNorm): L2 `2/5`, Linf `2/5`
+- TE memory + LayerNorm vs TE LayerNorm non-memory: L2 `2/5`, Linf `2/5`
+- TE memory vs Classical: L2 `2/5`, Linf `2/5`
+- TE memory vs Classical + memory: L2 `1/5`, Linf `1/5`
+- Classical + memory vs Classical: L2 `4/5`, Linf `4/5`
+
+### Accuracy-per-runtime context
+
+Using `mean(final L2) * mean(runtime)` (lower is better):
+
+- Classical + PI: `13.62`
+- Classical + memory: `12.96`
+- TE LayerNorm (non-memory): `42.37`
+- TE memory analytic: `39.17`
+
+This indicates memory-aware TE improves efficiency relative to non-memory TE, but remains far slower for a given error level than classical variants.
+
+### Stage-2 go/no-go check (memory TE vs best non-memory TE)
+
+Criteria from the Phase 8B plan:
+
+- (a) mean final L2 improves by >=2%
+- (b) >=3/5 L2 wins
+- (c) mean final loss improves by >=5% with runtime increase <=35%
+
+Observed for TE memory analytic vs TE LayerNorm non-memory:
+
+- L2 improvement: `+7.59%` (pass a)
+- L2 wins: `2/5` (fail b)
+- Loss improvement: `+18.10%` with runtime increase `+0.04%` (pass c)
+
+Result: **Stage-2 gate PASS** (criteria a and c passed).
+
+### Interpretation
+
+1. Memory-aware TE (analytic) improves over the best non-memory TE on mean L2 and mean loss, with essentially unchanged runtime.
+2. However, the Classical + memory control is stronger than memory-aware TE on both mean L2 and mean Linf, and wins `4/5` against classical baseline.
+3. This means current gains appear substantially driven by analytic memory features themselves; a TE-specific advantage is not yet established.
+4. TE memory + LayerNorm is unstable in this run (high variance, weaker means), so it should not be treated as a finalist without further stabilization.
+
+Bottom line: memory-aware analytic features are promising and worth continuing, but the current evidence supports a feature-engineering benefit more strongly than a unique TE-architecture benefit.

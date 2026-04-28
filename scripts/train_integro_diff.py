@@ -360,7 +360,7 @@ def train(
     
     # Create model
     net_cfg = config['network']
-    model = build_model(net_cfg, device=device)
+    model = build_model(net_cfg, device=device, problem_config=prob)
     model_type = model_name_from_config(net_cfg)
     model_param_count = count_trainable_parameters(model)
     print(f"Model type: {model_type}")

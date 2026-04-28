@@ -185,6 +185,8 @@ def _find_reference_run(summary: Dict[str, Dict], target: str) -> str | None:
 
 def build_ablation_stats(summary: Dict[str, Dict], benchmark_config_path: str) -> Dict | None:
     """Build compact ablation deltas/status vs full TE and classical references."""
+    if "ablation" not in str(benchmark_config_path).lower():
+        return None
     if len(summary) < 3:
         return None
 
@@ -701,6 +703,26 @@ def write_summary_csv(records: List[Dict], output_path: Path):
             writer.writerow({name: record.get(name) for name in fieldnames})
 
 
+def short_display_label(label: str) -> str:
+    """Compact labels for plot readability."""
+    compact = str(label)
+    replacements = [
+        ("TE-QPINN", "TE"),
+        ("Surrogate", "Surr."),
+        ("LayerNorm", "LN"),
+        ("post_quantum", "postQ"),
+        ("post_entanglement", "postEnt"),
+        ("Classical", "Cls"),
+        ("residual", "res"),
+        ("memory-aware", "mem"),
+        ("analytic", "ana"),
+        (" + PI", "+PI"),
+    ]
+    for old, new in replacements:
+        compact = compact.replace(old, new)
+    return compact.strip()
+
+
 def plot_seedwise_convergence(records: List[Dict], plots_dir: Path):
     by_seed: Dict[int, List[Dict]] = {}
     for record in records:
@@ -713,7 +735,7 @@ def plot_seedwise_convergence(records: List[Dict], plots_dir: Path):
             epochs = history.get("epochs", [])
             if not epochs:
                 continue
-            label = record["label"]
+            label = short_display_label(record["label"])
             losses = history.get("loss", [])
             l2_vals = history.get("l2", [])
             linf_vals = history.get("linf", [])
@@ -731,7 +753,7 @@ def plot_seedwise_convergence(records: List[Dict], plots_dir: Path):
         for ax in axes:
             ax.set_xlabel("Epoch")
             ax.grid(True, alpha=0.25)
-            ax.legend(frameon=False)
+            ax.legend(frameon=False, fontsize=8)
         axes[0].set_ylabel("Value")
         plt.tight_layout()
         fig.savefig(plots_dir / f"convergence_seed_{seed}.png", dpi=300, bbox_inches="tight")
@@ -744,6 +766,7 @@ def plot_summary_panels(summary: Dict[str, Dict], plots_dir: Path):
         return
 
     labels = [summary[name]["label"] for name in run_names]
+    short_labels = [short_display_label(label) for label in labels]
     metrics = [
         ("avg_runtime_sec", "Runtime (s)", False),
         ("avg_final_l2", "Final L2", True),
@@ -751,7 +774,8 @@ def plot_summary_panels(summary: Dict[str, Dict], plots_dir: Path):
         ("avg_parameter_count", "Parameter Count", False),
     ]
 
-    fig, axes = plt.subplots(2, 2, figsize=(14, 9))
+    fig_width = max(14.0, 4.0 + 2.4 * len(run_names))
+    fig, axes = plt.subplots(2, 2, figsize=(fig_width, 9), constrained_layout=True)
     axes = axes.flatten()
     for ax, (metric_key, title, use_log) in zip(axes, metrics):
         means = [summary[name].get(metric_key) for name in run_names]
@@ -759,15 +783,98 @@ def plot_summary_panels(summary: Dict[str, Dict], plots_dir: Path):
         stds = [summary[name].get(std_key, 0.0) for name in run_names]
         x_pos = np.arange(len(run_names))
         ax.bar(x_pos, means, yerr=stds, capsize=5, alpha=0.85)
-        ax.set_xticks(x_pos, labels)
+        ax.set_xticks(x_pos)
+        ax.set_xticklabels(short_labels, rotation=35, ha="right")
         ax.set_title(title)
         ax.grid(True, axis="y", alpha=0.25)
         if use_log:
             ax.set_yscale("log")
     fig.suptitle("TE-QPINN Benchmark Summary", fontsize=15, fontweight="bold")
-    plt.tight_layout(rect=[0, 0, 1, 0.97])
     fig.savefig(plots_dir / "summary_panels.png", dpi=300, bbox_inches="tight")
     plt.close(fig)
+
+
+def _is_memory_variant(run_name: str, label: str) -> bool:
+    token = f"{run_name} {label}".lower()
+    return "memory" in token or "mem_" in token or "_mem" in token
+
+
+def build_memory_smoke_stats(records: List[Dict], summary: Dict[str, Dict]) -> Dict | None:
+    """Build memory-smoke comparison stats when memory and non-memory TE runs coexist."""
+    seeds = sorted({int(record["seed"]) for record in records})
+    rows = []
+    for run_name, row in summary.items():
+        rows.append(
+            {
+                "run_name": run_name,
+                "label": row.get("label", run_name),
+                "model_type": str(row.get("model_type")),
+                "final_l2": row.get("avg_final_l2"),
+                "final_linf": row.get("avg_final_linf"),
+                "final_loss": row.get("avg_final_loss"),
+                "runtime_sec": row.get("avg_runtime_sec"),
+                "parameter_count": row.get("avg_parameter_count"),
+            }
+        )
+
+    te_rows = [row for row in rows if row["model_type"] == "te_qpinn_surrogate"]
+    te_memory = [row for row in te_rows if _is_memory_variant(row["run_name"], row["label"])]
+    te_non_memory = [row for row in te_rows if not _is_memory_variant(row["run_name"], row["label"])]
+    classical_memory = [
+        row
+        for row in rows
+        if row["model_type"] == "classical" and _is_memory_variant(row["run_name"], row["label"])
+    ]
+    if not te_memory or not te_non_memory:
+        return None
+
+    best_non_memory_te = min(
+        te_non_memory,
+        key=lambda item: float("inf") if item["final_l2"] is None else float(item["final_l2"]),
+    )
+    classical_memory_ref = classical_memory[0] if classical_memory else None
+
+    def delta(payload: Dict, ref: Dict, key: str) -> float | None:
+        lhs = payload.get(key)
+        rhs = ref.get(key)
+        if lhs is None or rhs is None:
+            return None
+        return float(lhs) - float(rhs)
+
+    comparisons = []
+    for row in te_memory:
+        comparisons.append(
+            {
+                "run_name": row["run_name"],
+                "label": row["label"],
+                "vs_best_non_memory_te": {
+                    "delta_final_l2": delta(row, best_non_memory_te, "final_l2"),
+                    "delta_final_linf": delta(row, best_non_memory_te, "final_linf"),
+                    "delta_final_loss": delta(row, best_non_memory_te, "final_loss"),
+                    "delta_runtime_sec": delta(row, best_non_memory_te, "runtime_sec"),
+                    "delta_parameter_count": delta(row, best_non_memory_te, "parameter_count"),
+                },
+                "vs_classical_memory": (
+                    None
+                    if classical_memory_ref is None
+                    else {
+                        "delta_final_l2": delta(row, classical_memory_ref, "final_l2"),
+                        "delta_final_linf": delta(row, classical_memory_ref, "final_linf"),
+                        "delta_final_loss": delta(row, classical_memory_ref, "final_loss"),
+                        "delta_runtime_sec": delta(row, classical_memory_ref, "runtime_sec"),
+                        "delta_parameter_count": delta(row, classical_memory_ref, "parameter_count"),
+                    }
+                ),
+            }
+        )
+
+    return {
+        "seed_scope": "single-seed" if len(seeds) == 1 else "multi-seed",
+        "seed_values": seeds,
+        "best_non_memory_te": best_non_memory_te,
+        "classical_memory_reference": classical_memory_ref,
+        "memory_te_comparisons": comparisons,
+    }
 
 
 def _field_meshgrid(x: np.ndarray, t: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
@@ -1001,10 +1108,17 @@ def plot_seedwise_error_heatmaps(records: List[Dict], plots_dir: Path):
 
     for seed, seed_records in by_seed.items():
         classical = next((r for r in seed_records if str(r.get("model_type")) == "classical"), None)
-        te_surrogate = next(
-            (r for r in seed_records if str(r.get("model_type")) == "te_qpinn_surrogate"),
-            None,
-        )
+        te_candidates = [
+            r for r in seed_records if str(r.get("model_type")) == "te_qpinn_surrogate"
+        ]
+        te_surrogate = None
+        if te_candidates:
+            te_surrogate = min(
+                te_candidates,
+                key=lambda row: float("inf")
+                if row.get("final_l2") is None
+                else float(row.get("final_l2")),
+            )
         if not classical or not te_surrogate:
             continue
 
@@ -1049,7 +1163,7 @@ def plot_seedwise_error_heatmaps(records: List[Dict], plots_dir: Path):
             vmin=0.0,
             vmax=vmax,
         )
-        axes[1].set_title("TE-QPINN Surrogate + PI |Error|")
+        axes[1].set_title(f"{te_surrogate.get('label', 'TE-QPINN')} |Error|")
         axes[1].set_xlabel("x")
         axes[1].set_ylabel("t")
 
@@ -1072,6 +1186,7 @@ def write_markdown_report(
     ablation_stats: Dict | None = None,
     multiseed_stats: Dict | None = None,
     optimizer_sensitivity_stats: Dict | None = None,
+    memory_smoke_stats: Dict | None = None,
 ):
     seeds = sorted({int(record["seed"]) for record in records})
     run_names = list(summary.keys())
@@ -1177,6 +1292,50 @@ def write_markdown_report(
                 f"{fmt(adam.get('final_loss'))} | {fmt(lbfgs.get('final_loss'))} | "
                 f"{fmt(adam.get('runtime_sec'))} | {fmt(lbfgs.get('runtime_sec'))} |"
             )
+
+    if memory_smoke_stats is not None:
+        best_non_memory = memory_smoke_stats.get("best_non_memory_te", {})
+        classical_memory = memory_smoke_stats.get("classical_memory_reference")
+        lines += [
+            "",
+            "## Memory Smoke Comparison",
+            "",
+            f"- Scope: {memory_smoke_stats.get('seed_scope')} ({memory_smoke_stats.get('seed_values')})",
+            (
+                f"- Best non-memory TE reference: **{best_non_memory.get('label')}** "
+                f"(L2={fmt(best_non_memory.get('final_l2'))}, "
+                f"Linf={fmt(best_non_memory.get('final_linf'))}, "
+                f"Loss={fmt(best_non_memory.get('final_loss'))})"
+            ),
+            (
+                "- Classical memory-feature control reference: "
+                f"**{classical_memory.get('label')}**" if classical_memory is not None else
+                "- Classical memory-feature control reference: n/a"
+            ),
+            "",
+            "| Memory Variant | Final L2 | Final Linf | Final Loss | Runtime (s) | Params | ΔL2 vs Best Non-memory TE | ΔLinf vs Best Non-memory TE | ΔL2 vs Classical Memory | ΔLinf vs Classical Memory |",
+            "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        ]
+        for row in memory_smoke_stats.get("memory_te_comparisons", []):
+            summary_row = summary.get(row.get("run_name", ""), {})
+            vs_best = row.get("vs_best_non_memory_te", {})
+            vs_classical = row.get("vs_classical_memory", {}) or {}
+            lines.append(
+                f"| {row.get('label')} | "
+                f"{fmt(summary_row.get('avg_final_l2'))} | "
+                f"{fmt(summary_row.get('avg_final_linf'))} | "
+                f"{fmt(summary_row.get('avg_final_loss'))} | "
+                f"{fmt(summary_row.get('avg_runtime_sec'))} | "
+                f"{fmt(summary_row.get('avg_parameter_count'), precision=1)} | "
+                f"{fmt(vs_best.get('delta_final_l2'))} | "
+                f"{fmt(vs_best.get('delta_final_linf'))} | "
+                f"{fmt(vs_classical.get('delta_final_l2'))} | "
+                f"{fmt(vs_classical.get('delta_final_linf'))} |"
+            )
+        lines += [
+            "",
+            "> Note: this memory section is smoke-level and should not be interpreted as multi-seed evidence.",
+        ]
 
     lines += [
         "",
@@ -1445,6 +1604,7 @@ def main():
     optimizer_sensitivity_stats = build_optimizer_sensitivity_stats(summary, str(benchmark_config_path))
     if optimizer_sensitivity_stats is not None:
         write_optimizer_sensitivity_stats(optimizer_sensitivity_stats, output_dir)
+    memory_smoke_stats = build_memory_smoke_stats(records, summary)
 
     write_summary_csv(records, summary_csv_path)
     summary_payload = {
@@ -1459,6 +1619,8 @@ def main():
         summary_payload["multiseed_stats"] = multiseed_stats
     if optimizer_sensitivity_stats is not None:
         summary_payload["optimizer_sensitivity_stats"] = optimizer_sensitivity_stats
+    if memory_smoke_stats is not None:
+        summary_payload["memory_smoke_stats"] = memory_smoke_stats
     with open(summary_json_path, "w", encoding="utf-8") as handle:
         json.dump(summary_payload, handle, indent=2)
 
@@ -1473,6 +1635,7 @@ def main():
         ablation_stats=ablation_stats,
         multiseed_stats=multiseed_stats,
         optimizer_sensitivity_stats=optimizer_sensitivity_stats,
+        memory_smoke_stats=memory_smoke_stats,
     )
 
     print("=" * 80)

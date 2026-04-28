@@ -15,6 +15,8 @@ from typing import Dict, List, Optional
 import torch
 import torch.nn as nn
 
+from .memory_features import MemoryFeatureBuilder
+
 
 def _activation_from_name(name: str) -> nn.Module:
     activations = {
@@ -106,13 +108,23 @@ class TEQPINNSurrogatePINN(nn.Module):
         hidden_layers: Optional[List[int]] = None,
         activation: str = "tanh",
         te_qpinn: Optional[Dict] = None,
+        problem: Optional[Dict] = None,
+        memory_feature_builder: Optional[MemoryFeatureBuilder] = None,
         device: str = "cpu",
     ):
         super().__init__()
         self.input_dim = input_dim
+        self.base_input_dim = input_dim
         self.output_dim = output_dim
         self.hidden_layers = hidden_layers or [64, 64, 64, 64]
         self.device = device
+        self.problem = problem or {}
+        self.memory_feature_builder = memory_feature_builder
+        self.feature_input_dim = (
+            int(memory_feature_builder.output_dim)
+            if memory_feature_builder is not None
+            else int(input_dim)
+        )
 
         cfg = te_qpinn or {}
         self.n_qubits = int(cfg.get("n_qubits", 8))
@@ -151,18 +163,17 @@ class TEQPINNSurrogatePINN(nn.Module):
 
         embedding_activation = cfg.get("embedding_activation", activation)
 
-        input_mins = _coerce_bounds(cfg.get("input_mins"), input_dim, 0.0)
-        input_maxs = _coerce_bounds(cfg.get("input_maxs"), input_dim, 1.0)
+        input_mins, input_maxs = self._resolve_input_bounds(cfg)
 
         self.rescaler = InputRescaler(
-            input_dim=input_dim,
+            input_dim=self.feature_input_dim,
             input_mins=input_mins,
             input_maxs=input_maxs,
             target_min=self.rescale_min,
             target_max=self.rescale_max,
         )
         self.embedding_fnn = TrainableEmbeddingFNN(
-            input_dim=input_dim,
+            input_dim=self.feature_input_dim,
             n_qubits=self.n_qubits,
             hidden_layers=embedding_hidden,
             activation=embedding_activation,
@@ -193,9 +204,11 @@ class TEQPINNSurrogatePINN(nn.Module):
         self.residual_branch = None
         self.residual_gate_logit = None
         if self.use_residual:
-            residual_hidden = int(cfg.get("residual_hidden_dim", max(8, input_dim * 4)))
+            residual_hidden = int(
+                cfg.get("residual_hidden_dim", max(8, self.feature_input_dim * 4))
+            )
             self.residual_branch = nn.Sequential(
-                nn.Linear(input_dim, residual_hidden),
+                nn.Linear(self.feature_input_dim, residual_hidden),
                 _activation_from_name(cfg.get("residual_activation", "tanh")),
                 nn.Linear(residual_hidden, output_dim),
             )
@@ -221,7 +234,42 @@ class TEQPINNSurrogatePINN(nn.Module):
                 if module.bias is not None:
                     nn.init.zeros_(module.bias)
 
+    def _resolve_input_bounds(self, cfg: Dict) -> tuple[torch.Tensor, torch.Tensor]:
+        input_mins_cfg = cfg.get("input_mins")
+        input_maxs_cfg = cfg.get("input_maxs")
+
+        if self.memory_feature_builder is not None:
+            default_mins, default_maxs = self.memory_feature_builder.default_bounds()
+            if input_mins_cfg is None and input_maxs_cfg is None:
+                return default_mins, default_maxs
+
+            if isinstance(input_mins_cfg, (list, tuple)) and isinstance(input_maxs_cfg, (list, tuple)):
+                if len(input_mins_cfg) == self.feature_input_dim and len(input_maxs_cfg) == self.feature_input_dim:
+                    return (
+                        _coerce_bounds(input_mins_cfg, self.feature_input_dim, 0.0),
+                        _coerce_bounds(input_maxs_cfg, self.feature_input_dim, 1.0),
+                    )
+                if (
+                    len(input_mins_cfg) == self.base_input_dim
+                    and len(input_maxs_cfg) == self.base_input_dim
+                    and self.feature_input_dim != self.base_input_dim
+                ):
+                    # Backward-compatible fallback for configs copied from non-memory runs.
+                    return default_mins, default_maxs
+
+            return (
+                _coerce_bounds(input_mins_cfg, self.feature_input_dim, 0.0),
+                _coerce_bounds(input_maxs_cfg, self.feature_input_dim, 1.0),
+            )
+
+        return (
+            _coerce_bounds(input_mins_cfg, self.feature_input_dim, 0.0),
+            _coerce_bounds(input_maxs_cfg, self.feature_input_dim, 1.0),
+        )
+
     def _prepare_inputs(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+        if self.memory_feature_builder is not None:
+            return self.memory_feature_builder(x, t)
         if x.dim() == 1:
             x = x.unsqueeze(-1)
         if t.dim() == 1:
@@ -229,7 +277,7 @@ class TEQPINNSurrogatePINN(nn.Module):
         return torch.cat([x, t], dim=-1)
 
     def _cycled_coordinates(self, scaled_inputs: torch.Tensor) -> torch.Tensor:
-        indices = torch.arange(self.n_qubits, device=scaled_inputs.device) % self.input_dim
+        indices = torch.arange(self.n_qubits, device=scaled_inputs.device) % self.feature_input_dim
         return scaled_inputs[:, indices]
 
     def _build_quantum_features(self, theta: torch.Tensor) -> torch.Tensor:

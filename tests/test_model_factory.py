@@ -26,6 +26,31 @@ class TestModelFactory:
         model = build_model(config, device="cpu")
         assert isinstance(model, PINN)
 
+    def test_build_classical_model_with_memory_features(self):
+        config = {
+            "model_type": "classical",
+            "input_dim": 2,
+            "output_dim": 1,
+            "hidden_layers": [16, 16],
+            "activation": "tanh",
+            "memory_features": "analytic",
+            "memory_feature_set": "basic_fractional",
+            "memory_feature_normalization": "scale",
+            "memory_epsilon": 1e-8,
+        }
+        problem = {
+            "alpha": 0.5,
+            "beta": 0.5,
+            "x_min": 0.0,
+            "x_max": 1.0,
+            "t_min": 0.0,
+            "t_max": 1.0,
+        }
+        model = build_model(config, device="cpu", problem_config=problem)
+        assert isinstance(model, PINN)
+        first_linear = next(m for m in model.network if isinstance(m, torch.nn.Linear))
+        assert first_linear.in_features == 8
+
     def test_build_quantum_ready_model(self):
         config = {
             "model_type": "quantum_ready",
