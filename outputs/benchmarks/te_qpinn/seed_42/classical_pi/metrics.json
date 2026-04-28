@@ -5,8 +5,8 @@
   "model_type": "classical",
   "epochs": 3,
   "final_epoch": 3,
-  "runtime_sec": 3.381838170113042,
-  "cpu_rss_delta_mb": 881.89453125,
+  "runtime_sec": 3.3343091858550906,
+  "cpu_rss_delta_mb": 897.3515625,
   "peak_gpu_memory_mb": 21.3896484375,
   "parameter_count": 1297,
   "final_loss": 41.528454397226014,
@@ -48,5 +48,11 @@
     "deterministic_sampling": true,
     "fixed_collocation": false
   },
-  "run_dir": "outputs/benchmarks/te_qpinn/seed_42/classical_pi"
+  "run_dir": "outputs/benchmarks/te_qpinn/seed_42/classical_pi",
+  "u_pred_heatmap": "outputs/plots/te_qpinn/seed_42_classical_pi_u_pred_heatmap.png",
+  "u_exact_heatmap": "outputs/plots/te_qpinn/seed_42_classical_pi_u_exact_heatmap.png",
+  "abs_error_heatmap": "outputs/plots/te_qpinn/seed_42_classical_pi_abs_error_heatmap.png",
+  "line_slices": "outputs/plots/te_qpinn/seed_42_classical_pi_line_slices.png",
+  "pde_residual_heatmap": "outputs/plots/te_qpinn/seed_42_classical_pi_pde_residual_heatmap.png",
+  "field_eval_npz": "outputs/benchmarks/te_qpinn/seed_42/classical_pi/field_eval.npz"
 }

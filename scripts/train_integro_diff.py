@@ -428,6 +428,8 @@ def train(
         'l2': [],
         'linf': [],
         'epochs': [],
+        'lbfgs_loss': [],
+        'lbfgs_epochs': [],
         'seed': seed,
         'data_seed': data_seed,
         'model_type': model_type,
@@ -457,6 +459,8 @@ def train(
             history.setdefault('parameter_count', model_param_count)
             history.setdefault('deterministic_sampling', deterministic_sampling)
             history.setdefault('fixed_collocation', fixed_collocation)
+            history.setdefault('lbfgs_loss', [])
+            history.setdefault('lbfgs_epochs', [])
             print(f"Resumed from epoch {checkpoint['epoch']}")
     
     # Training loop
@@ -590,6 +594,8 @@ def train(
     
     # L-BFGS fine-tuning
     lbfgs_cfg = train_cfg.get('lbfgs', {})
+    lbfgs_completed_epochs = 0
+    lbfgs_last_loss = None
     if lbfgs_cfg.get('enabled', False):
         print("=" * 60)
         print("Starting L-BFGS Fine-tuning")
@@ -616,6 +622,10 @@ def train(
                 return losses['total']
             
             loss = lbfgs_optimizer.step(closure)
+            lbfgs_completed_epochs = epoch
+            lbfgs_last_loss = float(loss.item())
+            history['lbfgs_epochs'].append(int(epoch))
+            history['lbfgs_loss'].append(lbfgs_last_loss)
             
             if epoch % 100 == 0:
                 l2_err, linf_err = compute_errors(
@@ -626,6 +636,7 @@ def train(
                     x_max=x_max,
                     t_max=t_max,
                     t_min=0.0,
+                    solution_cfg=solution_cfg,
                 )
                 print(f"\nL-BFGS Epoch {epoch}: Loss={loss.item():.4e}, "
                       f"L2={l2_err:.4e}, Linf={linf_err:.4e}")
@@ -649,13 +660,24 @@ def train(
     print(f"Final L2 Error: {l2_err:.6e}")
     print(f"Final Linf Error: {linf_err:.6e}")
     print("=" * 60)
+
+    final_loss = lbfgs_last_loss
+    if final_loss is None and history.get('loss'):
+        final_loss = float(history['loss'][-1])
+    history['final_loss'] = final_loss
+    history['final_l2'] = float(l2_err)
+    history['final_linf'] = float(linf_err)
+    history['final_epoch'] = int(last_epoch + lbfgs_completed_epochs)
+    history['lbfgs_enabled'] = bool(lbfgs_cfg.get('enabled', False))
+    history['lbfgs_epochs_ran'] = int(lbfgs_completed_epochs)
     
     torch.save({
-        'epoch': last_epoch,
+        'epoch': int(last_epoch + lbfgs_completed_epochs),
         'model_state_dict': model.state_dict(),
         'history': history,
         'config': config,
         'parameter_count': model_param_count,
+        'final_loss': final_loss,
         'final_l2': l2_err,
         'final_linf': linf_err
     }, checkpoint_dir / 'final_model.pt')

@@ -1,0 +1,120 @@
+{
+  "benchmark_config": "configs/benchmark_te_qpinn_layernorm_multiseed.yaml",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "reference_runs": {
+    "classical": "classical_pi",
+    "full_te": "full_te_pi"
+  },
+  "runs": [
+    {
+      "run_name": "classical_pi",
+      "label": "Classical + PI",
+      "model_type": "classical",
+      "mean_final_l2": 0.916582763248142,
+      "std_final_l2": 0.05839869100206328,
+      "mean_final_linf": 1.0613364655403887,
+      "std_final_linf": 0.1074211079689153,
+      "mean_final_loss": 43.1970570763351,
+      "std_final_loss": 10.514406824631548,
+      "mean_runtime_sec": 18.27142991302535,
+      "std_runtime_sec": 1.5317518873493323,
+      "mean_parameter_count": 2241.0,
+      "wins": {
+        "vs_full_te": {
+          "final_l2": {
+            "wins": 5,
+            "ties": 0,
+            "losses": 0,
+            "paired_seeds": 5
+          },
+          "final_linf": {
+            "wins": 2,
+            "ties": 0,
+            "losses": 3,
+            "paired_seeds": 5
+          }
+        }
+      }
+    },
+    {
+      "run_name": "full_te_pi",
+      "label": "TE fixed residual 0.10 + PI",
+      "model_type": "te_qpinn_surrogate",
+      "mean_final_l2": 0.9916930719438856,
+      "std_final_l2": 0.08066919733656297,
+      "mean_final_linf": 1.1074816825555753,
+      "std_final_linf": 0.08749974622587907,
+      "mean_final_loss": 48.78498539889444,
+      "std_final_loss": 9.389904843035486,
+      "mean_runtime_sec": 51.04638172388077,
+      "std_runtime_sec": 3.159293533272608,
+      "mean_parameter_count": 2306.0,
+      "wins": {
+        "vs_classical": {
+          "final_l2": {
+            "wins": 0,
+            "ties": 0,
+            "losses": 5,
+            "paired_seeds": 5
+          },
+          "final_linf": {
+            "wins": 3,
+            "ties": 0,
+            "losses": 2,
+            "paired_seeds": 5
+          }
+        }
+      }
+    },
+    {
+      "run_name": "ln_post_quantum_te_pi",
+      "label": "TE LayerNorm post_quantum + PI",
+      "model_type": "te_qpinn_surrogate",
+      "mean_final_l2": 0.9622035176749136,
+      "std_final_l2": 0.08497661551453513,
+      "mean_final_linf": 1.1045120842671663,
+      "std_final_linf": 0.11684385219585962,
+      "mean_final_loss": 43.59861465195727,
+      "std_final_loss": 8.919406846311514,
+      "mean_runtime_sec": 53.965575612057,
+      "std_runtime_sec": 3.7062865500194064,
+      "mean_parameter_count": 2338.0,
+      "wins": {
+        "vs_classical": {
+          "final_l2": {
+            "wins": 1,
+            "ties": 0,
+            "losses": 4,
+            "paired_seeds": 5
+          },
+          "final_linf": {
+            "wins": 3,
+            "ties": 0,
+            "losses": 2,
+            "paired_seeds": 5
+          }
+        },
+        "vs_full_te": {
+          "final_l2": {
+            "wins": 5,
+            "ties": 0,
+            "losses": 0,
+            "paired_seeds": 5
+          },
+          "final_linf": {
+            "wins": 2,
+            "ties": 0,
+            "losses": 3,
+            "paired_seeds": 5
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+# Phase 7D smoke benchmark: classical vs TE fixed vs TE LayerNorm variants (seed 42)
+
+seeds: [42]
+device: auto
+output_dir: outputs/benchmarks/te_qpinn_layernorm_smoke
+plots_dir: outputs/plots/te_qpinn_layernorm_smoke
+report_name: benchmark_report.md
+
+runs:
+  - name: classical_pi
+    label: Classical + PI
+    config: configs/benchmark_te_qpinn_50_classical_pi.yaml
+  - name: full_te_pi
+    label: TE fixed residual 0.10 + PI
+    config: configs/benchmark_te_qpinn_50_surrogate_pi.yaml
+  - name: ln_post_quantum_te_pi
+    label: TE LayerNorm post_quantum + PI
+    config: configs/benchmark_te_qpinn_50_surrogate_pi_layernorm_post_quantum.yaml
+  - name: ln_post_entanglement_te_pi
+    label: TE LayerNorm post_entanglement + PI
+    config: configs/benchmark_te_qpinn_50_surrogate_pi_layernorm_post_entanglement.yaml

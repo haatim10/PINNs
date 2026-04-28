@@ -1,0 +1,241 @@
+{
+  "benchmark_config": "configs/benchmark_te_qpinn_layernorm_smoke.yaml",
+  "reference_runs": {
+    "classical": "classical_pi",
+    "full_te": "full_te_pi"
+  },
+  "rows": [
+    {
+      "run_name": "classical_pi",
+      "label": "Classical + PI",
+      "model_type": "classical",
+      "mean_final_l2": 1.003809688984002,
+      "std_final_l2": 0.0,
+      "mean_final_linf": 1.0857765110148836,
+      "std_final_linf": 0.0,
+      "mean_final_loss": 62.2103007337165,
+      "std_final_loss": 0.0,
+      "mean_runtime_sec": 15.349281077971682,
+      "std_runtime_sec": 0.0,
+      "mean_parameter_count": 2241.0,
+      "vs_full_te": {
+        "avg_final_l2": {
+          "delta": 0.11696808498818512,
+          "status": "worsens"
+        },
+        "avg_final_linf": {
+          "delta": 0.1395960101218604,
+          "status": "worsens"
+        },
+        "avg_final_loss": {
+          "delta": -9.23321299871818,
+          "status": "improves"
+        },
+        "avg_runtime_sec": {
+          "delta": -23.63034121785313,
+          "status": "improves"
+        },
+        "avg_parameter_count": {
+          "delta": -65.0,
+          "status": "improves"
+        }
+      },
+      "vs_classical": {
+        "avg_final_l2": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_final_linf": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_final_loss": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_runtime_sec": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_parameter_count": {
+          "delta": 0.0,
+          "status": "neutral"
+        }
+      }
+    },
+    {
+      "run_name": "full_te_pi",
+      "label": "TE fixed residual 0.10 + PI",
+      "model_type": "te_qpinn_surrogate",
+      "mean_final_l2": 0.8868416039958169,
+      "std_final_l2": 0.0,
+      "mean_final_linf": 0.9461805008930232,
+      "std_final_linf": 0.0,
+      "mean_final_loss": 71.44351373243468,
+      "std_final_loss": 0.0,
+      "mean_runtime_sec": 38.97962229582481,
+      "std_runtime_sec": 0.0,
+      "mean_parameter_count": 2306.0,
+      "vs_full_te": {
+        "avg_final_l2": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_final_linf": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_final_loss": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_runtime_sec": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_parameter_count": {
+          "delta": 0.0,
+          "status": "neutral"
+        }
+      },
+      "vs_classical": {
+        "avg_final_l2": {
+          "delta": -0.11696808498818512,
+          "status": "improves"
+        },
+        "avg_final_linf": {
+          "delta": -0.1395960101218604,
+          "status": "improves"
+        },
+        "avg_final_loss": {
+          "delta": 9.23321299871818,
+          "status": "worsens"
+        },
+        "avg_runtime_sec": {
+          "delta": 23.63034121785313,
+          "status": "worsens"
+        },
+        "avg_parameter_count": {
+          "delta": 65.0,
+          "status": "worsens"
+        }
+      }
+    },
+    {
+      "run_name": "ln_post_quantum_te_pi",
+      "label": "TE LayerNorm post_quantum + PI",
+      "model_type": "te_qpinn_surrogate",
+      "mean_final_l2": 0.8239010943836619,
+      "std_final_l2": 0.0,
+      "mean_final_linf": 0.9576463939619246,
+      "std_final_linf": 0.0,
+      "mean_final_loss": 54.0574409350246,
+      "std_final_loss": 0.0,
+      "mean_runtime_sec": 40.95947939809412,
+      "std_runtime_sec": 0.0,
+      "mean_parameter_count": 2338.0,
+      "vs_full_te": {
+        "avg_final_l2": {
+          "delta": -0.06294050961215503,
+          "status": "improves"
+        },
+        "avg_final_linf": {
+          "delta": 0.011465893068901445,
+          "status": "worsens"
+        },
+        "avg_final_loss": {
+          "delta": -17.38607279741008,
+          "status": "improves"
+        },
+        "avg_runtime_sec": {
+          "delta": 1.9798571022693068,
+          "status": "worsens"
+        },
+        "avg_parameter_count": {
+          "delta": 32.0,
+          "status": "worsens"
+        }
+      },
+      "vs_classical": {
+        "avg_final_l2": {
+          "delta": -0.17990859460034014,
+          "status": "improves"
+        },
+        "avg_final_linf": {
+          "delta": -0.12813011705295896,
+          "status": "improves"
+        },
+        "avg_final_loss": {
+          "delta": -8.1528597986919,
+          "status": "improves"
+        },
+        "avg_runtime_sec": {
+          "delta": 25.610198320122436,
+          "status": "worsens"
+        },
+        "avg_parameter_count": {
+          "delta": 97.0,
+          "status": "worsens"
+        }
+      }
+    },
+    {
+      "run_name": "ln_post_entanglement_te_pi",
+      "label": "TE LayerNorm post_entanglement + PI",
+      "model_type": "te_qpinn_surrogate",
+      "mean_final_l2": 0.9349591371051662,
+      "std_final_l2": 0.0,
+      "mean_final_linf": 0.9623988254433805,
+      "std_final_linf": 0.0,
+      "mean_final_loss": 75.81858042581048,
+      "std_final_loss": 0.0,
+      "mean_runtime_sec": 40.877424818929285,
+      "std_runtime_sec": 0.0,
+      "mean_parameter_count": 2352.0,
+      "vs_full_te": {
+        "avg_final_l2": {
+          "delta": 0.0481175331093493,
+          "status": "worsens"
+        },
+        "avg_final_linf": {
+          "delta": 0.01621832455035732,
+          "status": "worsens"
+        },
+        "avg_final_loss": {
+          "delta": 4.3750666933758,
+          "status": "worsens"
+        },
+        "avg_runtime_sec": {
+          "delta": 1.897802523104474,
+          "status": "worsens"
+        },
+        "avg_parameter_count": {
+          "delta": 46.0,
+          "status": "worsens"
+        }
+      },
+      "vs_classical": {
+        "avg_final_l2": {
+          "delta": -0.06885055187883582,
+          "status": "improves"
+        },
+        "avg_final_linf": {
+          "delta": -0.12337768557150308,
+          "status": "improves"
+        },
+        "avg_final_loss": {
+          "delta": 13.60827969209398,
+          "status": "worsens"
+        },
+        "avg_runtime_sec": {
+          "delta": 25.528143740957603,
+          "status": "worsens"
+        },
+        "avg_parameter_count": {
+          "delta": 111.0,
+          "status": "worsens"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,357 @@
+{
+  "benchmark_config": "configs/benchmark_te_qpinn_optimizer_sensitivity.yaml",
+  "reference_runs": {
+    "classical": "classical_adam_pi",
+    "full_te": "te_fixed_adam_pi"
+  },
+  "rows": [
+    {
+      "run_name": "classical_adam_pi",
+      "label": "Classical + PI (Adam)",
+      "model_type": "classical",
+      "mean_final_l2": 1.003809688984002,
+      "std_final_l2": 0.0,
+      "mean_final_linf": 1.0857765110148836,
+      "std_final_linf": 0.0,
+      "mean_final_loss": 62.2103007337165,
+      "std_final_loss": 0.0,
+      "mean_runtime_sec": 15.701891603181139,
+      "std_runtime_sec": 0.0,
+      "mean_parameter_count": 2241.0,
+      "vs_full_te": {
+        "avg_final_l2": {
+          "delta": 0.11696808498818512,
+          "status": "worsens"
+        },
+        "avg_final_linf": {
+          "delta": 0.1395960101218604,
+          "status": "worsens"
+        },
+        "avg_final_loss": {
+          "delta": -9.23321299871818,
+          "status": "improves"
+        },
+        "avg_runtime_sec": {
+          "delta": -24.90761029883288,
+          "status": "improves"
+        },
+        "avg_parameter_count": {
+          "delta": -65.0,
+          "status": "improves"
+        }
+      },
+      "vs_classical": {
+        "avg_final_l2": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_final_linf": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_final_loss": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_runtime_sec": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_parameter_count": {
+          "delta": 0.0,
+          "status": "neutral"
+        }
+      }
+    },
+    {
+      "run_name": "classical_adam_lbfgs_pi",
+      "label": "Classical + PI (Adam+LBFGS, extended)",
+      "model_type": "classical",
+      "mean_final_l2": 0.08513528320751203,
+      "std_final_l2": 0.0,
+      "mean_final_linf": 0.2603776383447869,
+      "std_final_linf": 0.0,
+      "mean_final_loss": 0.1611022430406534,
+      "std_final_loss": 0.0,
+      "mean_runtime_sec": 549.772064659046,
+      "std_runtime_sec": 0.0,
+      "mean_parameter_count": 2241.0,
+      "vs_full_te": {
+        "avg_final_l2": {
+          "delta": -0.8017063207883048,
+          "status": "improves"
+        },
+        "avg_final_linf": {
+          "delta": -0.6858028625482363,
+          "status": "improves"
+        },
+        "avg_final_loss": {
+          "delta": -71.28241148939402,
+          "status": "improves"
+        },
+        "avg_runtime_sec": {
+          "delta": 509.162562757032,
+          "status": "worsens"
+        },
+        "avg_parameter_count": {
+          "delta": -65.0,
+          "status": "improves"
+        }
+      },
+      "vs_classical": {
+        "avg_final_l2": {
+          "delta": -0.91867440577649,
+          "status": "improves"
+        },
+        "avg_final_linf": {
+          "delta": -0.8253988726700967,
+          "status": "improves"
+        },
+        "avg_final_loss": {
+          "delta": -62.04919849067585,
+          "status": "improves"
+        },
+        "avg_runtime_sec": {
+          "delta": 534.0701730558649,
+          "status": "worsens"
+        },
+        "avg_parameter_count": {
+          "delta": 0.0,
+          "status": "neutral"
+        }
+      }
+    },
+    {
+      "run_name": "te_fixed_adam_pi",
+      "label": "TE fixed residual 0.10 + PI (Adam)",
+      "model_type": "te_qpinn_surrogate",
+      "mean_final_l2": 0.8868416039958169,
+      "std_final_l2": 0.0,
+      "mean_final_linf": 0.9461805008930232,
+      "std_final_linf": 0.0,
+      "mean_final_loss": 71.44351373243468,
+      "std_final_loss": 0.0,
+      "mean_runtime_sec": 40.60950190201402,
+      "std_runtime_sec": 0.0,
+      "mean_parameter_count": 2306.0,
+      "vs_full_te": {
+        "avg_final_l2": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_final_linf": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_final_loss": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_runtime_sec": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_parameter_count": {
+          "delta": 0.0,
+          "status": "neutral"
+        }
+      },
+      "vs_classical": {
+        "avg_final_l2": {
+          "delta": -0.11696808498818512,
+          "status": "improves"
+        },
+        "avg_final_linf": {
+          "delta": -0.1395960101218604,
+          "status": "improves"
+        },
+        "avg_final_loss": {
+          "delta": 9.23321299871818,
+          "status": "worsens"
+        },
+        "avg_runtime_sec": {
+          "delta": 24.90761029883288,
+          "status": "worsens"
+        },
+        "avg_parameter_count": {
+          "delta": 65.0,
+          "status": "worsens"
+        }
+      }
+    },
+    {
+      "run_name": "te_fixed_adam_lbfgs_pi",
+      "label": "TE fixed residual 0.10 + PI (Adam+LBFGS, extended)",
+      "model_type": "te_qpinn_surrogate",
+      "mean_final_l2": 0.05903507542498608,
+      "std_final_l2": 0.0,
+      "mean_final_linf": 0.20913452968552781,
+      "std_final_linf": 0.0,
+      "mean_final_loss": 0.0817498677607251,
+      "std_final_loss": 0.0,
+      "mean_runtime_sec": 1589.7987813649233,
+      "std_runtime_sec": 0.0,
+      "mean_parameter_count": 2306.0,
+      "vs_full_te": {
+        "avg_final_l2": {
+          "delta": -0.8278065285708308,
+          "status": "improves"
+        },
+        "avg_final_linf": {
+          "delta": -0.7370459712074954,
+          "status": "improves"
+        },
+        "avg_final_loss": {
+          "delta": -71.36176386467396,
+          "status": "improves"
+        },
+        "avg_runtime_sec": {
+          "delta": 1549.1892794629093,
+          "status": "worsens"
+        },
+        "avg_parameter_count": {
+          "delta": 0.0,
+          "status": "neutral"
+        }
+      },
+      "vs_classical": {
+        "avg_final_l2": {
+          "delta": -0.9447746135590159,
+          "status": "improves"
+        },
+        "avg_final_linf": {
+          "delta": -0.8766419813293558,
+          "status": "improves"
+        },
+        "avg_final_loss": {
+          "delta": -62.12855086595577,
+          "status": "improves"
+        },
+        "avg_runtime_sec": {
+          "delta": 1574.0968897617422,
+          "status": "worsens"
+        },
+        "avg_parameter_count": {
+          "delta": 65.0,
+          "status": "worsens"
+        }
+      }
+    },
+    {
+      "run_name": "te_layernorm_adam_pi",
+      "label": "TE LayerNorm post_quantum + PI (Adam)",
+      "model_type": "te_qpinn_surrogate",
+      "mean_final_l2": 0.8239010943836619,
+      "std_final_l2": 0.0,
+      "mean_final_linf": 0.9576463939619246,
+      "std_final_linf": 0.0,
+      "mean_final_loss": 54.0574409350246,
+      "std_final_loss": 0.0,
+      "mean_runtime_sec": 41.84406907088123,
+      "std_runtime_sec": 0.0,
+      "mean_parameter_count": 2338.0,
+      "vs_full_te": {
+        "avg_final_l2": {
+          "delta": -0.06294050961215503,
+          "status": "improves"
+        },
+        "avg_final_linf": {
+          "delta": 0.011465893068901445,
+          "status": "worsens"
+        },
+        "avg_final_loss": {
+          "delta": -17.38607279741008,
+          "status": "improves"
+        },
+        "avg_runtime_sec": {
+          "delta": 1.2345671688672155,
+          "status": "worsens"
+        },
+        "avg_parameter_count": {
+          "delta": 32.0,
+          "status": "worsens"
+        }
+      },
+      "vs_classical": {
+        "avg_final_l2": {
+          "delta": -0.17990859460034014,
+          "status": "improves"
+        },
+        "avg_final_linf": {
+          "delta": -0.12813011705295896,
+          "status": "improves"
+        },
+        "avg_final_loss": {
+          "delta": -8.1528597986919,
+          "status": "improves"
+        },
+        "avg_runtime_sec": {
+          "delta": 26.142177467700094,
+          "status": "worsens"
+        },
+        "avg_parameter_count": {
+          "delta": 97.0,
+          "status": "worsens"
+        }
+      }
+    },
+    {
+      "run_name": "te_layernorm_adam_lbfgs_pi",
+      "label": "TE LayerNorm post_quantum + PI (Adam+LBFGS, extended)",
+      "model_type": "te_qpinn_surrogate",
+      "mean_final_l2": 0.035359329448984976,
+      "std_final_l2": 0.0,
+      "mean_final_linf": 0.10743505618424187,
+      "std_final_linf": 0.0,
+      "mean_final_loss": 0.12988334558022074,
+      "std_final_loss": 0.0,
+      "mean_runtime_sec": 1697.6654683218803,
+      "std_runtime_sec": 0.0,
+      "mean_parameter_count": 2338.0,
+      "vs_full_te": {
+        "avg_final_l2": {
+          "delta": -0.8514822745468319,
+          "status": "improves"
+        },
+        "avg_final_linf": {
+          "delta": -0.8387454447087813,
+          "status": "improves"
+        },
+        "avg_final_loss": {
+          "delta": -71.31363038685446,
+          "status": "improves"
+        },
+        "avg_runtime_sec": {
+          "delta": 1657.0559664198663,
+          "status": "worsens"
+        },
+        "avg_parameter_count": {
+          "delta": 32.0,
+          "status": "worsens"
+        }
+      },
+      "vs_classical": {
+        "avg_final_l2": {
+          "delta": -0.968450359535017,
+          "status": "improves"
+        },
+        "avg_final_linf": {
+          "delta": -0.9783414548306417,
+          "status": "improves"
+        },
+        "avg_final_loss": {
+          "delta": -62.08041738813628,
+          "status": "improves"
+        },
+        "avg_runtime_sec": {
+          "delta": 1681.9635767186992,
+          "status": "worsens"
+        },
+        "avg_parameter_count": {
+          "delta": 97.0,
+          "status": "worsens"
+        }
+      }
+    }
+  ]
+}

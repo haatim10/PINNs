@@ -1,0 +1,18 @@
+# Phase 7E: post-quantum LayerNorm multi-seed validation (locked 50x50 setup)
+
+seeds: [0, 1, 2, 3, 4]
+device: auto
+output_dir: outputs/benchmarks/te_qpinn_layernorm_multiseed
+plots_dir: outputs/plots/te_qpinn_layernorm_multiseed
+report_name: benchmark_report.md
+
+runs:
+  - name: classical_pi
+    label: Classical + PI
+    config: configs/benchmark_te_qpinn_50_classical_pi.yaml
+  - name: full_te_pi
+    label: TE fixed residual 0.10 + PI
+    config: configs/benchmark_te_qpinn_50_surrogate_pi.yaml
+  - name: ln_post_quantum_te_pi
+    label: TE LayerNorm post_quantum + PI
+    config: configs/benchmark_te_qpinn_50_surrogate_pi_layernorm_post_quantum.yaml

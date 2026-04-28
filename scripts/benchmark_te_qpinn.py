@@ -67,6 +67,11 @@ def parse_args():
         help="Benchmark plan YAML with run config file paths",
     )
     parser.add_argument("--dry-run", action="store_true", help="Print planned runs and exit")
+    parser.add_argument(
+        "--resume-incomplete",
+        action="store_true",
+        help="Resume benchmark by reusing existing run metrics and executing only missing runs",
+    )
     return parser.parse_args()
 
 
@@ -132,6 +137,8 @@ def summarize_records(records: List[Dict]) -> Dict[str, Dict]:
             "avg_cpu_rss_delta_mb": safe_mean(item["cpu_rss_delta_mb"] for item in items),
             "avg_peak_gpu_memory_mb": safe_mean(item["peak_gpu_memory_mb"] for item in items),
             "avg_parameter_count": safe_mean(item["parameter_count"] for item in items),
+            "avg_final_loss": safe_mean(item["final_loss"] for item in items),
+            "std_final_loss": safe_std(item["final_loss"] for item in items),
             "avg_final_l2": safe_mean(item["final_l2"] for item in items),
             "std_final_l2": safe_std(item["final_l2"] for item in items),
             "avg_final_linf": safe_mean(item["final_linf"] for item in items),
@@ -141,6 +148,525 @@ def summarize_records(records: List[Dict]) -> Dict[str, Dict]:
             "avg_final_epoch": safe_mean(item["final_epoch"] for item in items),
         }
     return summary
+
+
+def _delta_status(current: float | None, reference: float | None, lower_is_better: bool = True) -> Tuple[float | None, str]:
+    """Return (delta, status) where status in {improves, worsens, neutral, n/a}."""
+    if current is None or reference is None:
+        return None, "n/a"
+    delta = float(current - reference)
+    eps = 1e-12
+    if abs(delta) <= eps:
+        return delta, "neutral"
+    if lower_is_better:
+        return delta, "improves" if delta < 0 else "worsens"
+    return delta, "improves" if delta > 0 else "worsens"
+
+
+def _find_reference_run(summary: Dict[str, Dict], target: str) -> str | None:
+    if target == "classical":
+        if "classical_pi" in summary:
+            return "classical_pi"
+        for run_name, row in summary.items():
+            if str(row.get("model_type")) == "classical":
+                return run_name
+        return None
+    if target == "full_te":
+        if "full_te_pi" in summary:
+            return "full_te_pi"
+        if "te_qpinn_surrogate_pi" in summary:
+            return "te_qpinn_surrogate_pi"
+        for run_name, row in summary.items():
+            if str(row.get("model_type")) == "te_qpinn_surrogate":
+                return run_name
+        return None
+    return None
+
+
+def build_ablation_stats(summary: Dict[str, Dict], benchmark_config_path: str) -> Dict | None:
+    """Build compact ablation deltas/status vs full TE and classical references."""
+    if len(summary) < 3:
+        return None
+
+    classical_ref = _find_reference_run(summary, "classical")
+    full_te_ref = _find_reference_run(summary, "full_te")
+    if classical_ref is None or full_te_ref is None:
+        return None
+
+    metrics = [
+        ("avg_final_l2", True),
+        ("avg_final_linf", True),
+        ("avg_final_loss", True),
+        ("avg_runtime_sec", True),
+    ]
+
+    rows = []
+    for run_name, row in summary.items():
+        row_payload = {
+            "run_name": run_name,
+            "label": row.get("label"),
+            "model_type": row.get("model_type"),
+            "mean_final_l2": row.get("avg_final_l2"),
+            "std_final_l2": row.get("std_final_l2"),
+            "mean_final_linf": row.get("avg_final_linf"),
+            "std_final_linf": row.get("std_final_linf"),
+            "mean_final_loss": row.get("avg_final_loss"),
+            "std_final_loss": row.get("std_final_loss"),
+            "mean_runtime_sec": row.get("avg_runtime_sec"),
+            "std_runtime_sec": row.get("std_runtime_sec"),
+            "mean_parameter_count": row.get("avg_parameter_count"),
+            "vs_full_te": {},
+            "vs_classical": {},
+        }
+
+        for metric_key, lower_is_better in metrics:
+            d_te, s_te = _delta_status(
+                row.get(metric_key),
+                summary[full_te_ref].get(metric_key),
+                lower_is_better=lower_is_better,
+            )
+            d_cls, s_cls = _delta_status(
+                row.get(metric_key),
+                summary[classical_ref].get(metric_key),
+                lower_is_better=lower_is_better,
+            )
+            row_payload["vs_full_te"][metric_key] = {"delta": d_te, "status": s_te}
+            row_payload["vs_classical"][metric_key] = {"delta": d_cls, "status": s_cls}
+
+        d_param_te, s_param_te = _delta_status(
+            row.get("avg_parameter_count"),
+            summary[full_te_ref].get("avg_parameter_count"),
+            lower_is_better=True,
+        )
+        d_param_cls, s_param_cls = _delta_status(
+            row.get("avg_parameter_count"),
+            summary[classical_ref].get("avg_parameter_count"),
+            lower_is_better=True,
+        )
+        row_payload["vs_full_te"]["avg_parameter_count"] = {"delta": d_param_te, "status": s_param_te}
+        row_payload["vs_classical"]["avg_parameter_count"] = {"delta": d_param_cls, "status": s_param_cls}
+
+        rows.append(row_payload)
+
+    return {
+        "benchmark_config": benchmark_config_path,
+        "reference_runs": {
+            "classical": classical_ref,
+            "full_te": full_te_ref,
+        },
+        "rows": rows,
+    }
+
+
+def write_ablation_stats(ablation_stats: Dict, output_dir: Path):
+    """Write ablation stats to JSON and compact markdown."""
+    json_path = output_dir / "ablation_stats.json"
+    md_path = output_dir / "ablation_stats.md"
+    with open(json_path, "w", encoding="utf-8") as handle:
+        json.dump(ablation_stats, handle, indent=2)
+
+    def fmt(value: float | None, precision: int = 6) -> str:
+        if value is None:
+            return "n/a"
+        return f"{float(value):.{precision}f}"
+
+    lines = [
+        "# TE-QPINN Ablation Stats",
+        "",
+        f"- Benchmark config: `{ablation_stats.get('benchmark_config')}`",
+        f"- Reference full TE run: `{ablation_stats.get('reference_runs', {}).get('full_te')}`",
+        f"- Reference classical run: `{ablation_stats.get('reference_runs', {}).get('classical')}`",
+        "",
+        "## Metrics",
+        "",
+        "| Variant | Final L2 | Final Linf | Final Loss | Runtime (s) | Params |",
+        "| --- | ---: | ---: | ---: | ---: | ---: |",
+    ]
+    for row in ablation_stats.get("rows", []):
+        lines.append(
+            f"| {row.get('label')} | "
+            f"{fmt(row.get('mean_final_l2'))} | "
+            f"{fmt(row.get('mean_final_linf'))} | "
+            f"{fmt(row.get('mean_final_loss'))} | "
+            f"{fmt(row.get('mean_runtime_sec'), precision=4)} | "
+            f"{fmt(row.get('mean_parameter_count'), precision=1)} |"
+        )
+
+    lines += [
+        "",
+        "## Comparison Status",
+        "",
+        "| Variant | L2 vs Full TE | Linf vs Full TE | Loss vs Full TE | Runtime vs Full TE | L2 vs Classical | Linf vs Classical | Loss vs Classical | Runtime vs Classical |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    for row in ablation_stats.get("rows", []):
+        full = row.get("vs_full_te", {})
+        cls = row.get("vs_classical", {})
+        lines.append(
+            f"| {row.get('label')} | "
+            f"{full.get('avg_final_l2', {}).get('status', 'n/a')} | "
+            f"{full.get('avg_final_linf', {}).get('status', 'n/a')} | "
+            f"{full.get('avg_final_loss', {}).get('status', 'n/a')} | "
+            f"{full.get('avg_runtime_sec', {}).get('status', 'n/a')} | "
+            f"{cls.get('avg_final_l2', {}).get('status', 'n/a')} | "
+            f"{cls.get('avg_final_linf', {}).get('status', 'n/a')} | "
+            f"{cls.get('avg_final_loss', {}).get('status', 'n/a')} | "
+            f"{cls.get('avg_runtime_sec', {}).get('status', 'n/a')} |"
+        )
+
+    md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _paired_seed_records(records: List[Dict], run_name: str, reference_run: str) -> List[Tuple[Dict, Dict]]:
+    """Collect paired records for (run_name, reference_run) over common seeds."""
+    by_seed: Dict[int, Dict[str, Dict]] = {}
+    for record in records:
+        seed = int(record["seed"])
+        by_seed.setdefault(seed, {})
+        by_seed[seed][str(record["run_name"])] = record
+
+    paired: List[Tuple[Dict, Dict]] = []
+    for seed_map in by_seed.values():
+        if run_name in seed_map and reference_run in seed_map:
+            paired.append((seed_map[run_name], seed_map[reference_run]))
+    return paired
+
+
+def _win_count_for_metric(
+    records: List[Dict],
+    run_name: str,
+    reference_run: str,
+    metric_key: str,
+) -> Dict[str, int]:
+    """Count wins/ties/losses for lower-is-better metrics on paired seeds."""
+    paired = _paired_seed_records(records, run_name, reference_run)
+    wins = 0
+    ties = 0
+    losses = 0
+    for run_record, ref_record in paired:
+        run_value = run_record.get(metric_key)
+        ref_value = ref_record.get(metric_key)
+        if run_value is None or ref_value is None:
+            continue
+        run_float = float(run_value)
+        ref_float = float(ref_value)
+        if abs(run_float - ref_float) <= 1e-12:
+            ties += 1
+        elif run_float < ref_float:
+            wins += 1
+        else:
+            losses += 1
+    return {
+        "wins": wins,
+        "ties": ties,
+        "losses": losses,
+        "paired_seeds": len(paired),
+    }
+
+
+def build_multiseed_stats(records: List[Dict], summary: Dict[str, Dict], benchmark_config_path: str) -> Dict | None:
+    """Build compact multi-seed statistics including paired win counts."""
+    unique_seeds = sorted({int(record["seed"]) for record in records})
+    if len(unique_seeds) < 2:
+        return None
+
+    classical_ref = _find_reference_run(summary, "classical")
+    full_te_ref = _find_reference_run(summary, "full_te")
+
+    run_rows = []
+    for run_name, row in summary.items():
+        row_payload = {
+            "run_name": run_name,
+            "label": row.get("label"),
+            "model_type": row.get("model_type"),
+            "mean_final_l2": row.get("avg_final_l2"),
+            "std_final_l2": row.get("std_final_l2"),
+            "mean_final_linf": row.get("avg_final_linf"),
+            "std_final_linf": row.get("std_final_linf"),
+            "mean_final_loss": row.get("avg_final_loss"),
+            "std_final_loss": row.get("std_final_loss"),
+            "mean_runtime_sec": row.get("avg_runtime_sec"),
+            "std_runtime_sec": row.get("std_runtime_sec"),
+            "mean_parameter_count": row.get("avg_parameter_count"),
+            "wins": {},
+        }
+
+        if classical_ref is not None and run_name != classical_ref:
+            row_payload["wins"]["vs_classical"] = {
+                "final_l2": _win_count_for_metric(records, run_name, classical_ref, "final_l2"),
+                "final_linf": _win_count_for_metric(records, run_name, classical_ref, "final_linf"),
+            }
+        if full_te_ref is not None and run_name != full_te_ref:
+            row_payload["wins"]["vs_full_te"] = {
+                "final_l2": _win_count_for_metric(records, run_name, full_te_ref, "final_l2"),
+                "final_linf": _win_count_for_metric(records, run_name, full_te_ref, "final_linf"),
+            }
+
+        run_rows.append(row_payload)
+
+    return {
+        "benchmark_config": benchmark_config_path,
+        "seeds": unique_seeds,
+        "reference_runs": {
+            "classical": classical_ref,
+            "full_te": full_te_ref,
+        },
+        "runs": run_rows,
+    }
+
+
+def write_multiseed_stats(multiseed_stats: Dict, output_dir: Path):
+    """Write multi-seed stats to JSON and compact markdown."""
+    json_path = output_dir / "multiseed_stats.json"
+    md_path = output_dir / "multiseed_stats.md"
+    with open(json_path, "w", encoding="utf-8") as handle:
+        json.dump(multiseed_stats, handle, indent=2)
+
+    def fmt(value: float | None, precision: int = 6) -> str:
+        if value is None:
+            return "n/a"
+        return f"{float(value):.{precision}f}"
+
+    lines = [
+        "# TE-QPINN Multi-Seed Stats",
+        "",
+        f"- Benchmark config: `{multiseed_stats.get('benchmark_config')}`",
+        f"- Seeds: {multiseed_stats.get('seeds', [])}",
+        f"- Reference classical run: `{multiseed_stats.get('reference_runs', {}).get('classical')}`",
+        f"- Reference full TE run: `{multiseed_stats.get('reference_runs', {}).get('full_te')}`",
+        "",
+        "## Aggregate Metrics",
+        "",
+        "| Variant | Final L2 (mean±std) | Final Linf (mean±std) | Final Loss (mean±std) | Runtime (s, mean±std) | Params |",
+        "| --- | ---: | ---: | ---: | ---: | ---: |",
+    ]
+
+    for row in multiseed_stats.get("runs", []):
+        lines.append(
+            f"| {row.get('label')} | "
+            f"{fmt(row.get('mean_final_l2'))} ± {fmt(row.get('std_final_l2'))} | "
+            f"{fmt(row.get('mean_final_linf'))} ± {fmt(row.get('std_final_linf'))} | "
+            f"{fmt(row.get('mean_final_loss'))} ± {fmt(row.get('std_final_loss'))} | "
+            f"{fmt(row.get('mean_runtime_sec'), precision=4)} ± {fmt(row.get('std_runtime_sec'), precision=4)} | "
+            f"{fmt(row.get('mean_parameter_count'), precision=1)} |"
+        )
+
+    lines += [
+        "",
+        "## Win Counts",
+        "",
+        "| Variant | L2 wins vs Classical | Linf wins vs Classical | L2 wins vs Full TE | Linf wins vs Full TE |",
+        "| --- | ---: | ---: | ---: | ---: |",
+    ]
+
+    for row in multiseed_stats.get("runs", []):
+        wins = row.get("wins", {})
+        cls_l2 = wins.get("vs_classical", {}).get("final_l2", {})
+        cls_linf = wins.get("vs_classical", {}).get("final_linf", {})
+        te_l2 = wins.get("vs_full_te", {}).get("final_l2", {})
+        te_linf = wins.get("vs_full_te", {}).get("final_linf", {})
+
+        def fmt_wins(payload: Dict) -> str:
+            if not payload:
+                return "n/a"
+            return f"{payload.get('wins', 0)} / {payload.get('paired_seeds', 0)}"
+
+        lines.append(
+            f"| {row.get('label')} | "
+            f"{fmt_wins(cls_l2)} | "
+            f"{fmt_wins(cls_linf)} | "
+            f"{fmt_wins(te_l2)} | "
+            f"{fmt_wins(te_linf)} |"
+        )
+
+    md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _optimizer_metric_delta(
+    adam_value: float | None,
+    adam_lbfgs_value: float | None,
+    lower_is_better: bool = True,
+) -> Dict[str, float | str | None]:
+    """Return delta payload for Adam+LBFGS minus Adam."""
+    if adam_value is None or adam_lbfgs_value is None:
+        return {
+            "delta": None,
+            "relative_percent": None,
+            "status": "n/a",
+        }
+
+    adam_float = float(adam_value)
+    lbfgs_float = float(adam_lbfgs_value)
+    delta = lbfgs_float - adam_float
+    if abs(delta) <= 1e-12:
+        status = "neutral"
+    elif lower_is_better:
+        status = "improves" if delta < 0 else "worsens"
+    else:
+        status = "improves" if delta > 0 else "worsens"
+
+    relative = None
+    if abs(adam_float) > 1e-12:
+        relative = (delta / adam_float) * 100.0
+    return {
+        "delta": float(delta),
+        "relative_percent": None if relative is None else float(relative),
+        "status": status,
+    }
+
+
+def build_optimizer_sensitivity_stats(summary: Dict[str, Dict], benchmark_config_path: str) -> Dict | None:
+    """Build Adam vs Adam+LBFGS comparison payload for optimizer sensitivity studies."""
+    pair_specs = [
+        {
+            "variant_id": "classical_pi",
+            "label": "Classical + PI",
+            "adam_run": "classical_adam_pi",
+            "adam_lbfgs_run": "classical_adam_lbfgs_pi",
+        },
+        {
+            "variant_id": "te_fixed_pi",
+            "label": "TE fixed residual 0.10 + PI",
+            "adam_run": "te_fixed_adam_pi",
+            "adam_lbfgs_run": "te_fixed_adam_lbfgs_pi",
+        },
+        {
+            "variant_id": "te_layernorm_post_quantum_pi",
+            "label": "TE LayerNorm post_quantum + PI",
+            "adam_run": "te_layernorm_adam_pi",
+            "adam_lbfgs_run": "te_layernorm_adam_lbfgs_pi",
+        },
+    ]
+
+    rows = []
+    for spec in pair_specs:
+        adam_run = spec["adam_run"]
+        adam_lbfgs_run = spec["adam_lbfgs_run"]
+        if adam_run not in summary or adam_lbfgs_run not in summary:
+            continue
+
+        adam_row = summary[adam_run]
+        lbfgs_row = summary[adam_lbfgs_run]
+        rows.append(
+            {
+                "variant_id": spec["variant_id"],
+                "label": spec["label"],
+                "adam_run": adam_run,
+                "adam_lbfgs_run": adam_lbfgs_run,
+                "adam": {
+                    "final_l2": adam_row.get("avg_final_l2"),
+                    "final_linf": adam_row.get("avg_final_linf"),
+                    "final_loss": adam_row.get("avg_final_loss"),
+                    "runtime_sec": adam_row.get("avg_runtime_sec"),
+                    "parameter_count": adam_row.get("avg_parameter_count"),
+                },
+                "adam_lbfgs": {
+                    "final_l2": lbfgs_row.get("avg_final_l2"),
+                    "final_linf": lbfgs_row.get("avg_final_linf"),
+                    "final_loss": lbfgs_row.get("avg_final_loss"),
+                    "runtime_sec": lbfgs_row.get("avg_runtime_sec"),
+                    "parameter_count": lbfgs_row.get("avg_parameter_count"),
+                },
+                "delta_adam_lbfgs_minus_adam": {
+                    "final_l2": _optimizer_metric_delta(
+                        adam_row.get("avg_final_l2"),
+                        lbfgs_row.get("avg_final_l2"),
+                        lower_is_better=True,
+                    ),
+                    "final_linf": _optimizer_metric_delta(
+                        adam_row.get("avg_final_linf"),
+                        lbfgs_row.get("avg_final_linf"),
+                        lower_is_better=True,
+                    ),
+                    "final_loss": _optimizer_metric_delta(
+                        adam_row.get("avg_final_loss"),
+                        lbfgs_row.get("avg_final_loss"),
+                        lower_is_better=True,
+                    ),
+                    "runtime_sec": _optimizer_metric_delta(
+                        adam_row.get("avg_runtime_sec"),
+                        lbfgs_row.get("avg_runtime_sec"),
+                        lower_is_better=True,
+                    ),
+                    "parameter_count": _optimizer_metric_delta(
+                        adam_row.get("avg_parameter_count"),
+                        lbfgs_row.get("avg_parameter_count"),
+                        lower_is_better=True,
+                    ),
+                },
+            }
+        )
+
+    if not rows:
+        return None
+
+    return {
+        "benchmark_config": benchmark_config_path,
+        "budget_note": (
+            "Adam+LBFGS includes an extended optimization budget "
+            "(Adam stage plus LBFGS fine-tuning) and is not an equal-budget "
+            "comparison with Adam-only runs."
+        ),
+        "rows": rows,
+    }
+
+
+def write_optimizer_sensitivity_stats(optimizer_stats: Dict, output_dir: Path):
+    """Write optimizer sensitivity stats to JSON and markdown."""
+    json_path = output_dir / "optimizer_sensitivity_stats.json"
+    md_path = output_dir / "optimizer_sensitivity_stats.md"
+
+    with open(json_path, "w", encoding="utf-8") as handle:
+        json.dump(optimizer_stats, handle, indent=2)
+
+    def fmt(value: float | None, precision: int = 6) -> str:
+        if value is None:
+            return "n/a"
+        return f"{float(value):.{precision}f}"
+
+    lines = [
+        "# Optimizer Sensitivity Stats",
+        "",
+        f"- Benchmark config: `{optimizer_stats.get('benchmark_config')}`",
+        f"- Note: {optimizer_stats.get('budget_note')}",
+        "",
+        "## Adam vs Adam+LBFGS",
+        "",
+        "| Variant | Adam L2 | Adam+LBFGS L2 | ΔL2 | Adam Linf | Adam+LBFGS Linf | ΔLinf | Adam Loss | Adam+LBFGS Loss | ΔLoss | Adam Runtime (s) | Adam+LBFGS Runtime (s) | ΔRuntime (s) | Adam Params | Adam+LBFGS Params |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+    ]
+    for row in optimizer_stats.get("rows", []):
+        adam = row.get("adam", {})
+        lbfgs = row.get("adam_lbfgs", {})
+        delta = row.get("delta_adam_lbfgs_minus_adam", {})
+        lines.append(
+            f"| {row.get('label')} | "
+            f"{fmt(adam.get('final_l2'))} | {fmt(lbfgs.get('final_l2'))} | {fmt(delta.get('final_l2', {}).get('delta'))} | "
+            f"{fmt(adam.get('final_linf'))} | {fmt(lbfgs.get('final_linf'))} | {fmt(delta.get('final_linf', {}).get('delta'))} | "
+            f"{fmt(adam.get('final_loss'))} | {fmt(lbfgs.get('final_loss'))} | {fmt(delta.get('final_loss', {}).get('delta'))} | "
+            f"{fmt(adam.get('runtime_sec'), precision=4)} | {fmt(lbfgs.get('runtime_sec'), precision=4)} | {fmt(delta.get('runtime_sec', {}).get('delta'), precision=4)} | "
+            f"{fmt(adam.get('parameter_count'), precision=1)} | {fmt(lbfgs.get('parameter_count'), precision=1)} |"
+        )
+
+    lines += [
+        "",
+        "## Delta Status (Adam+LBFGS - Adam)",
+        "",
+        "| Variant | L2 | Linf | Loss | Runtime | Params |",
+        "| --- | --- | --- | --- | --- | --- |",
+    ]
+    for row in optimizer_stats.get("rows", []):
+        delta = row.get("delta_adam_lbfgs_minus_adam", {})
+        lines.append(
+            f"| {row.get('label')} | "
+            f"{delta.get('final_l2', {}).get('status', 'n/a')} | "
+            f"{delta.get('final_linf', {}).get('status', 'n/a')} | "
+            f"{delta.get('final_loss', {}).get('status', 'n/a')} | "
+            f"{delta.get('runtime_sec', {}).get('status', 'n/a')} | "
+            f"{delta.get('parameter_count', {}).get('status', 'n/a')} |"
+        )
+
+    md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def write_summary_csv(records: List[Dict], output_path: Path):
@@ -543,6 +1069,9 @@ def write_markdown_report(
     summary: Dict[str, Dict],
     output_path: Path,
     benchmark_config_path: str,
+    ablation_stats: Dict | None = None,
+    multiseed_stats: Dict | None = None,
+    optimizer_sensitivity_stats: Dict | None = None,
 ):
     seeds = sorted({int(record["seed"]) for record in records})
     run_names = list(summary.keys())
@@ -562,8 +1091,8 @@ def write_markdown_report(
         "",
         "## Summary",
         "",
-        "| Variant | Model Type | Runs | Runtime (s) | Params | Final L2 | Final Linf |",
-        "| --- | --- | ---: | ---: | ---: | ---: | ---: |",
+        "| Variant | Model Type | Runs | Runtime (s) | Params | Final Loss | Final L2 | Final Linf |",
+        "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for run_name in run_names:
         row = summary[run_name]
@@ -571,9 +1100,83 @@ def write_markdown_report(
             f"| {row['label']} | {row['model_type']} | {row['num_runs']} | "
             f"{fmt(row['avg_runtime_sec'])} ± {fmt(row.get('std_runtime_sec', 0.0))} | "
             f"{fmt(row['avg_parameter_count'], precision=1)} | "
+            f"{fmt(row.get('avg_final_loss'))} ± {fmt(row.get('std_final_loss', 0.0))} | "
             f"{fmt(row['avg_final_l2'])} ± {fmt(row.get('std_final_l2', 0.0))} | "
             f"{fmt(row['avg_final_linf'])} ± {fmt(row.get('std_final_linf', 0.0))} |"
         )
+
+    if ablation_stats is not None:
+        lines += [
+            "",
+            "## Ablation Comparison",
+            "",
+            "| Variant | L2 vs Full TE | Linf vs Full TE | Loss vs Full TE | Runtime vs Full TE | L2 vs Classical | Linf vs Classical | Loss vs Classical | Runtime vs Classical |",
+            "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        ]
+        for row in ablation_stats.get("rows", []):
+            full = row.get("vs_full_te", {})
+            cls = row.get("vs_classical", {})
+            lines.append(
+                f"| {row.get('label')} | "
+                f"{full.get('avg_final_l2', {}).get('status', 'n/a')} | "
+                f"{full.get('avg_final_linf', {}).get('status', 'n/a')} | "
+                f"{full.get('avg_final_loss', {}).get('status', 'n/a')} | "
+                f"{full.get('avg_runtime_sec', {}).get('status', 'n/a')} | "
+                f"{cls.get('avg_final_l2', {}).get('status', 'n/a')} | "
+                f"{cls.get('avg_final_linf', {}).get('status', 'n/a')} | "
+                f"{cls.get('avg_final_loss', {}).get('status', 'n/a')} | "
+                f"{cls.get('avg_runtime_sec', {}).get('status', 'n/a')} |"
+            )
+
+    if multiseed_stats is not None:
+        lines += [
+            "",
+            "## Multi-Seed Win Counts",
+            "",
+            "| Variant | L2 wins vs Classical | Linf wins vs Classical | L2 wins vs Full TE | Linf wins vs Full TE |",
+            "| --- | ---: | ---: | ---: | ---: |",
+        ]
+
+        for row in multiseed_stats.get("runs", []):
+            wins = row.get("wins", {})
+            cls_l2 = wins.get("vs_classical", {}).get("final_l2", {})
+            cls_linf = wins.get("vs_classical", {}).get("final_linf", {})
+            te_l2 = wins.get("vs_full_te", {}).get("final_l2", {})
+            te_linf = wins.get("vs_full_te", {}).get("final_linf", {})
+
+            def fmt_wins(payload: Dict) -> str:
+                if not payload:
+                    return "n/a"
+                return f"{payload.get('wins', 0)} / {payload.get('paired_seeds', 0)}"
+
+            lines.append(
+                f"| {row.get('label')} | "
+                f"{fmt_wins(cls_l2)} | "
+                f"{fmt_wins(cls_linf)} | "
+                f"{fmt_wins(te_l2)} | "
+                f"{fmt_wins(te_linf)} |"
+            )
+
+    if optimizer_sensitivity_stats is not None:
+        lines += [
+            "",
+            "## Optimizer Sensitivity (Adam vs Adam+LBFGS)",
+            "",
+            f"- Note: {optimizer_sensitivity_stats.get('budget_note')}",
+            "",
+            "| Variant | Adam L2 | Adam+LBFGS L2 | Adam Linf | Adam+LBFGS Linf | Adam Loss | Adam+LBFGS Loss | Adam Runtime (s) | Adam+LBFGS Runtime (s) |",
+            "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        ]
+        for row in optimizer_sensitivity_stats.get("rows", []):
+            adam = row.get("adam", {})
+            lbfgs = row.get("adam_lbfgs", {})
+            lines.append(
+                f"| {row.get('label')} | "
+                f"{fmt(adam.get('final_l2'))} | {fmt(lbfgs.get('final_l2'))} | "
+                f"{fmt(adam.get('final_linf'))} | {fmt(lbfgs.get('final_linf'))} | "
+                f"{fmt(adam.get('final_loss'))} | {fmt(lbfgs.get('final_loss'))} | "
+                f"{fmt(adam.get('runtime_sec'))} | {fmt(lbfgs.get('runtime_sec'))} |"
+            )
 
     lines += [
         "",
@@ -590,6 +1193,21 @@ def write_markdown_report(
         "- `seed_<seed>_<run>_line_slices.png`",
         "- `error_heatmaps_seed_<seed>_classical_vs_te_qpinn.png`",
     ]
+    if ablation_stats is not None:
+        lines += [
+            "- `ablation_stats.json`",
+            "- `ablation_stats.md`",
+        ]
+    if multiseed_stats is not None:
+        lines += [
+            "- `multiseed_stats.json`",
+            "- `multiseed_stats.md`",
+        ]
+    if optimizer_sensitivity_stats is not None:
+        lines += [
+            "- `optimizer_sensitivity_stats.json`",
+            "- `optimizer_sensitivity_stats.md`",
+        ]
     output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -654,13 +1272,34 @@ def run_benchmark_case(
     cpu_delta_mb = max(0.0, cpu_after_mb - cpu_before_mb)
     peak_gpu_mb = torch.cuda.max_memory_allocated() / (1024.0 ** 2) if use_cuda else None
 
-    final_loss = history["loss"][-1] if history.get("loss") else None
-    final_l2 = history["l2"][-1] if history.get("l2") else None
-    final_linf = history["linf"][-1] if history.get("linf") else None
+    final_loss = history.get("final_loss")
+    if final_loss is None and history.get("loss"):
+        final_loss = history["loss"][-1]
+
+    final_l2 = history.get("final_l2")
+    if final_l2 is None and history.get("l2"):
+        final_l2 = history["l2"][-1]
+
+    final_linf = history.get("final_linf")
+    if final_linf is None and history.get("linf"):
+        final_linf = history["linf"][-1]
+
     best_l2, best_l2_epoch = best_history_value(history, "l2")
     best_linf, best_linf_epoch = best_history_value(history, "linf")
     best_loss, best_loss_epoch = best_history_value(history, "loss")
-    final_epoch = history["epochs"][-1] if history.get("epochs") else int(config["training"]["epochs"])
+    final_epoch = history.get("final_epoch")
+    if final_epoch is None:
+        final_epoch = history["epochs"][-1] if history.get("epochs") else int(config["training"]["epochs"])
+
+    if final_l2 is not None and (best_l2 is None or float(final_l2) < float(best_l2)):
+        best_l2 = float(final_l2)
+        best_l2_epoch = int(final_epoch)
+    if final_linf is not None and (best_linf is None or float(final_linf) < float(best_linf)):
+        best_linf = float(final_linf)
+        best_linf_epoch = int(final_epoch)
+    if final_loss is not None and (best_loss is None or float(final_loss) < float(best_loss)):
+        best_loss = float(final_loss)
+        best_loss_epoch = int(final_epoch)
 
     model_type = model_name_from_config(config.get("network", {}))
     record = {
@@ -700,6 +1339,16 @@ def run_benchmark_case(
 
     with open(run_dir / "metrics.json", "w", encoding="utf-8") as handle:
         json.dump(record, handle, indent=2)
+    return record
+
+
+def load_existing_record(output_dir: Path, seed: int, run_name: str) -> Dict | None:
+    """Load previously saved metrics for a run if available."""
+    metrics_path = output_dir / f"seed_{seed}" / run_name / "metrics.json"
+    if not metrics_path.exists():
+        return None
+    with open(metrics_path, "r", encoding="utf-8") as handle:
+        record = json.load(handle)
     return record
 
 
@@ -751,17 +1400,27 @@ def main():
     for item in planned:
         run_name = item["run_name"]
         run_label = item["label"]
+        seed = int(item["seed"])
+
+        if args.resume_incomplete:
+            existing = load_existing_record(output_dir=output_dir, seed=seed, run_name=run_name)
+            if existing is not None:
+                print("-" * 80)
+                print(f"Reusing existing metrics for seed={seed} run={run_name}")
+                records.append(existing)
+                continue
+
         source_cfg_path = Path(item["config"])
         if not source_cfg_path.is_absolute():
             source_cfg_path = (root_dir / source_cfg_path).resolve()
 
         print("-" * 80)
-        print(f"Running seed={item['seed']} run={run_name}")
+        print(f"Running seed={seed} run={run_name}")
         record = run_benchmark_case(
             run_name=run_name,
             run_label=run_label,
             config_source=source_cfg_path,
-            seed=int(item["seed"]),
+            seed=seed,
             output_dir=output_dir,
             plots_dir=plots_dir,
             device_mode=device_mode,
@@ -777,6 +1436,15 @@ def main():
     summary_csv_path = output_dir / "summary.csv"
     summary_json_path = output_dir / "summary.json"
     report_path = output_dir / report_name
+    ablation_stats = build_ablation_stats(summary, str(benchmark_config_path))
+    if ablation_stats is not None:
+        write_ablation_stats(ablation_stats, output_dir)
+    multiseed_stats = build_multiseed_stats(records, summary, str(benchmark_config_path))
+    if multiseed_stats is not None:
+        write_multiseed_stats(multiseed_stats, output_dir)
+    optimizer_sensitivity_stats = build_optimizer_sensitivity_stats(summary, str(benchmark_config_path))
+    if optimizer_sensitivity_stats is not None:
+        write_optimizer_sensitivity_stats(optimizer_sensitivity_stats, output_dir)
 
     write_summary_csv(records, summary_csv_path)
     summary_payload = {
@@ -785,13 +1453,27 @@ def main():
         "records": records,
         "aggregate": summary,
     }
+    if ablation_stats is not None:
+        summary_payload["ablation_stats"] = ablation_stats
+    if multiseed_stats is not None:
+        summary_payload["multiseed_stats"] = multiseed_stats
+    if optimizer_sensitivity_stats is not None:
+        summary_payload["optimizer_sensitivity_stats"] = optimizer_sensitivity_stats
     with open(summary_json_path, "w", encoding="utf-8") as handle:
         json.dump(summary_payload, handle, indent=2)
 
     plot_seedwise_convergence(records, plots_dir)
     plot_summary_panels(summary, plots_dir)
     plot_seedwise_error_heatmaps(records, plots_dir)
-    write_markdown_report(records, summary, report_path, str(benchmark_config_path))
+    write_markdown_report(
+        records,
+        summary,
+        report_path,
+        str(benchmark_config_path),
+        ablation_stats=ablation_stats,
+        multiseed_stats=multiseed_stats,
+        optimizer_sensitivity_stats=optimizer_sensitivity_stats,
+    )
 
     print("=" * 80)
     print("Benchmark complete")

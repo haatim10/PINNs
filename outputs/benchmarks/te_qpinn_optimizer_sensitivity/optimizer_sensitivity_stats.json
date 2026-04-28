@@ -1,0 +1,147 @@
+{
+  "benchmark_config": "configs/benchmark_te_qpinn_optimizer_sensitivity.yaml",
+  "budget_note": "Adam+LBFGS includes an extended optimization budget (Adam stage plus LBFGS fine-tuning) and is not an equal-budget comparison with Adam-only runs.",
+  "rows": [
+    {
+      "variant_id": "classical_pi",
+      "label": "Classical + PI",
+      "adam_run": "classical_adam_pi",
+      "adam_lbfgs_run": "classical_adam_lbfgs_pi",
+      "adam": {
+        "final_l2": 1.003809688984002,
+        "final_linf": 1.0857765110148836,
+        "final_loss": 62.2103007337165,
+        "runtime_sec": 15.701891603181139,
+        "parameter_count": 2241.0
+      },
+      "adam_lbfgs": {
+        "final_l2": 0.08513528320751203,
+        "final_linf": 0.2603776383447869,
+        "final_loss": 0.1611022430406534,
+        "runtime_sec": 549.772064659046,
+        "parameter_count": 2241.0
+      },
+      "delta_adam_lbfgs_minus_adam": {
+        "final_l2": {
+          "delta": -0.91867440577649,
+          "relative_percent": -91.51878248020489,
+          "status": "improves"
+        },
+        "final_linf": {
+          "delta": -0.8253988726700967,
+          "relative_percent": -76.01922350471462,
+          "status": "improves"
+        },
+        "final_loss": {
+          "delta": -62.04919849067585,
+          "relative_percent": -99.74103606454142,
+          "status": "improves"
+        },
+        "runtime_sec": {
+          "delta": 534.0701730558649,
+          "relative_percent": 3401.3110429807357,
+          "status": "worsens"
+        },
+        "parameter_count": {
+          "delta": 0.0,
+          "relative_percent": 0.0,
+          "status": "neutral"
+        }
+      }
+    },
+    {
+      "variant_id": "te_fixed_pi",
+      "label": "TE fixed residual 0.10 + PI",
+      "adam_run": "te_fixed_adam_pi",
+      "adam_lbfgs_run": "te_fixed_adam_lbfgs_pi",
+      "adam": {
+        "final_l2": 0.8868416039958169,
+        "final_linf": 0.9461805008930232,
+        "final_loss": 71.44351373243468,
+        "runtime_sec": 40.60950190201402,
+        "parameter_count": 2306.0
+      },
+      "adam_lbfgs": {
+        "final_l2": 0.05903507542498608,
+        "final_linf": 0.20913452968552781,
+        "final_loss": 0.0817498677607251,
+        "runtime_sec": 1589.7987813649233,
+        "parameter_count": 2306.0
+      },
+      "delta_adam_lbfgs_minus_adam": {
+        "final_l2": {
+          "delta": -0.8278065285708308,
+          "relative_percent": -93.34322215387805,
+          "status": "improves"
+        },
+        "final_linf": {
+          "delta": -0.7370459712074954,
+          "relative_percent": -77.8969732003415,
+          "status": "improves"
+        },
+        "final_loss": {
+          "delta": -71.36176386467396,
+          "relative_percent": -99.8855741221423,
+          "status": "improves"
+        },
+        "runtime_sec": {
+          "delta": 1549.1892794629093,
+          "relative_percent": 3814.844326830016,
+          "status": "worsens"
+        },
+        "parameter_count": {
+          "delta": 0.0,
+          "relative_percent": 0.0,
+          "status": "neutral"
+        }
+      }
+    },
+    {
+      "variant_id": "te_layernorm_post_quantum_pi",
+      "label": "TE LayerNorm post_quantum + PI",
+      "adam_run": "te_layernorm_adam_pi",
+      "adam_lbfgs_run": "te_layernorm_adam_lbfgs_pi",
+      "adam": {
+        "final_l2": 0.8239010943836619,
+        "final_linf": 0.9576463939619246,
+        "final_loss": 54.0574409350246,
+        "runtime_sec": 41.84406907088123,
+        "parameter_count": 2338.0
+      },
+      "adam_lbfgs": {
+        "final_l2": 0.035359329448984976,
+        "final_linf": 0.10743505618424187,
+        "final_loss": 0.12988334558022074,
+        "runtime_sec": 1697.6654683218803,
+        "parameter_count": 2338.0
+      },
+      "delta_adam_lbfgs_minus_adam": {
+        "final_l2": {
+          "delta": -0.7885417649346769,
+          "relative_percent": -95.70830410470126,
+          "status": "improves"
+        },
+        "final_linf": {
+          "delta": -0.8502113377776828,
+          "relative_percent": -88.7813438382233,
+          "status": "improves"
+        },
+        "final_loss": {
+          "delta": -53.92755758944438,
+          "relative_percent": -99.75973086529136,
+          "status": "improves"
+        },
+        "runtime_sec": {
+          "delta": 1655.821399250999,
+          "relative_percent": 3957.1232817872974,
+          "status": "worsens"
+        },
+        "parameter_count": {
+          "delta": 0.0,
+          "relative_percent": 0.0,
+          "status": "neutral"
+        }
+      }
+    }
+  ]
+}

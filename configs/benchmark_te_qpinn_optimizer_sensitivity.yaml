@@ -1,0 +1,29 @@
+# Phase 7F: optimizer sensitivity study (seed 42, locked 50x50 setup)
+#
+# Note: Adam+LBFGS runs use an extended optimization budget relative to Adam-only.
+
+seeds: [42]
+device: auto
+output_dir: outputs/benchmarks/te_qpinn_optimizer_sensitivity
+plots_dir: outputs/plots/te_qpinn_optimizer_sensitivity
+report_name: benchmark_report.md
+
+runs:
+  - name: classical_adam_pi
+    label: Classical + PI (Adam)
+    config: configs/benchmark_te_qpinn_optimizer_classical_adam_pi.yaml
+  - name: classical_adam_lbfgs_pi
+    label: Classical + PI (Adam+LBFGS, extended)
+    config: configs/benchmark_te_qpinn_optimizer_classical_adam_lbfgs_pi.yaml
+  - name: te_fixed_adam_pi
+    label: TE fixed residual 0.10 + PI (Adam)
+    config: configs/benchmark_te_qpinn_optimizer_te_fixed_adam_pi.yaml
+  - name: te_fixed_adam_lbfgs_pi
+    label: TE fixed residual 0.10 + PI (Adam+LBFGS, extended)
+    config: configs/benchmark_te_qpinn_optimizer_te_fixed_adam_lbfgs_pi.yaml
+  - name: te_layernorm_adam_pi
+    label: TE LayerNorm post_quantum + PI (Adam)
+    config: configs/benchmark_te_qpinn_optimizer_te_layernorm_adam_pi.yaml
+  - name: te_layernorm_adam_lbfgs_pi
+    label: TE LayerNorm post_quantum + PI (Adam+LBFGS, extended)
+    config: configs/benchmark_te_qpinn_optimizer_te_layernorm_adam_lbfgs_pi.yaml

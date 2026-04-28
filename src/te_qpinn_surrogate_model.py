@@ -42,6 +42,12 @@ def _coerce_bounds(bounds, input_dim: int, default_value: float) -> torch.Tensor
     return torch.tensor(values, dtype=torch.float64)
 
 
+def _logit_from_probability(probability: float, eps: float = 1e-6) -> float:
+    """Convert a probability in [0,1] into a numerically-stable logit."""
+    p = min(max(float(probability), eps), 1.0 - eps)
+    return float(torch.log(torch.tensor(p / (1.0 - p), dtype=torch.float64)))
+
+
 class InputRescaler(nn.Module):
     """Affine rescaler for coordinate inputs."""
 
@@ -116,6 +122,27 @@ class TEQPINNSurrogatePINN(nn.Module):
         self.use_residual = bool(cfg.get("residual_connection", True))
         self.residual_scale = float(cfg.get("residual_scale", 1.0))
         self.expectation_activation = str(cfg.get("expectation_activation", "tanh")).lower()
+        self.feature_norm = str(cfg.get("feature_norm", "none")).lower()
+        self.feature_norm_position = str(
+            cfg.get("feature_norm_position", "post_entanglement")
+        ).lower()
+        self.residual_blend_mode = str(cfg.get("residual_blend_mode", "fixed")).lower()
+        self.residual_gate_init = float(cfg.get("residual_gate_init", 0.5))
+        if self.feature_norm not in {"none", "layernorm"}:
+            raise ValueError(
+                f"Unsupported feature_norm '{self.feature_norm}'. "
+                "Use 'none' or 'layernorm'."
+            )
+        if self.feature_norm_position not in {"post_quantum", "post_entanglement"}:
+            raise ValueError(
+                f"Unsupported feature_norm_position '{self.feature_norm_position}'. "
+                "Use 'post_quantum' or 'post_entanglement'."
+            )
+        if self.residual_blend_mode not in {"fixed", "gated"}:
+            raise ValueError(
+                f"Unsupported residual_blend_mode '{self.residual_blend_mode}'. "
+                "Use 'fixed' or 'gated'."
+            )
 
         embedding_hidden = cfg.get("embedding_hidden_layers", [32, 32])
         if isinstance(embedding_hidden, int):
@@ -141,9 +168,18 @@ class TEQPINNSurrogatePINN(nn.Module):
             activation=embedding_activation,
         )
 
-        feature_dim = 2 * self.n_qubits
+        quantum_feature_dim = 2 * self.n_qubits
+        feature_dim = quantum_feature_dim
         if self.use_pairwise_entanglement and self.n_qubits > 1:
             feature_dim += self.n_qubits - 1
+
+        self.quantum_feature_norm = None
+        self.entangled_feature_norm = None
+        if self.feature_norm == "layernorm":
+            if self.feature_norm_position == "post_quantum":
+                self.quantum_feature_norm = nn.LayerNorm(quantum_feature_dim)
+            else:
+                self.entangled_feature_norm = nn.LayerNorm(feature_dim)
 
         variational_hidden = int(cfg.get("variational_hidden_dim", max(16, feature_dim)))
         self.variational = nn.Sequential(
@@ -155,12 +191,23 @@ class TEQPINNSurrogatePINN(nn.Module):
         self.readout = nn.Linear(self.n_qubits, output_dim)
 
         self.residual_branch = None
+        self.residual_gate_logit = None
         if self.use_residual:
             residual_hidden = int(cfg.get("residual_hidden_dim", max(8, input_dim * 4)))
             self.residual_branch = nn.Sequential(
                 nn.Linear(input_dim, residual_hidden),
                 _activation_from_name(cfg.get("residual_activation", "tanh")),
                 nn.Linear(residual_hidden, output_dim),
+            )
+            if self.residual_blend_mode == "gated":
+                gate_logit = _logit_from_probability(self.residual_gate_init)
+                self.residual_gate_logit = nn.Parameter(
+                    torch.tensor(gate_logit, dtype=torch.float64)
+                )
+        elif self.residual_blend_mode == "gated":
+            # Gated blending requires both quantum and residual branches.
+            raise ValueError(
+                "residual_blend_mode='gated' requires residual_connection=true."
             )
 
         self._initialize_weights()
@@ -186,11 +233,18 @@ class TEQPINNSurrogatePINN(nn.Module):
         return scaled_inputs[:, indices]
 
     def _build_quantum_features(self, theta: torch.Tensor) -> torch.Tensor:
-        parts = [torch.sin(theta), torch.cos(theta)]
+        quantum_features = torch.cat([torch.sin(theta), torch.cos(theta)], dim=-1)
+        if self.quantum_feature_norm is not None:
+            quantum_features = self.quantum_feature_norm(quantum_features)
+
+        features = quantum_features
         if self.use_pairwise_entanglement and self.n_qubits > 1:
             pairwise = torch.sin(theta[:, :-1]) * torch.cos(theta[:, 1:])
-            parts.append(pairwise)
-        return torch.cat(parts, dim=-1)
+            features = torch.cat([features, pairwise], dim=-1)
+
+        if self.entangled_feature_norm is not None:
+            features = self.entangled_feature_norm(features)
+        return features
 
     def _apply_expectation_activation(self, values: torch.Tensor) -> torch.Tensor:
         if self.expectation_activation == "identity":
@@ -223,7 +277,12 @@ class TEQPINNSurrogatePINN(nn.Module):
         output = self.readout(expectation)
 
         if self.residual_branch is not None:
-            output = output + self.residual_scale * self.residual_branch(scaled_inputs)
+            residual_output = self.residual_branch(scaled_inputs)
+            if self.residual_blend_mode == "gated":
+                gate = torch.sigmoid(self.residual_gate_logit)
+                output = gate * output + (1.0 - gate) * residual_output
+            else:
+                output = output + self.residual_scale * residual_output
 
         return output
 

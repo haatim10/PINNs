@@ -1,0 +1,183 @@
+{
+  "benchmark_config": "configs/benchmark_te_qpinn_gated_smoke.yaml",
+  "reference_runs": {
+    "classical": "classical_pi",
+    "full_te": "full_te_pi"
+  },
+  "rows": [
+    {
+      "run_name": "classical_pi",
+      "label": "Classical + PI",
+      "model_type": "classical",
+      "mean_final_l2": 1.003809688984002,
+      "std_final_l2": 0.0,
+      "mean_final_linf": 1.0857765110148836,
+      "std_final_linf": 0.0,
+      "mean_final_loss": 62.2103007337165,
+      "std_final_loss": 0.0,
+      "mean_runtime_sec": 15.723425498930737,
+      "std_runtime_sec": 0.0,
+      "mean_parameter_count": 2241.0,
+      "vs_full_te": {
+        "avg_final_l2": {
+          "delta": 0.11696808498818512,
+          "status": "worsens"
+        },
+        "avg_final_linf": {
+          "delta": 0.1395960101218604,
+          "status": "worsens"
+        },
+        "avg_final_loss": {
+          "delta": -9.23321299871818,
+          "status": "improves"
+        },
+        "avg_runtime_sec": {
+          "delta": -23.359626842895523,
+          "status": "improves"
+        },
+        "avg_parameter_count": {
+          "delta": -65.0,
+          "status": "improves"
+        }
+      },
+      "vs_classical": {
+        "avg_final_l2": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_final_linf": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_final_loss": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_runtime_sec": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_parameter_count": {
+          "delta": 0.0,
+          "status": "neutral"
+        }
+      }
+    },
+    {
+      "run_name": "full_te_pi",
+      "label": "TE-QPINN Fixed Residual 0.10 + PI",
+      "model_type": "te_qpinn_surrogate",
+      "mean_final_l2": 0.8868416039958169,
+      "std_final_l2": 0.0,
+      "mean_final_linf": 0.9461805008930232,
+      "std_final_linf": 0.0,
+      "mean_final_loss": 71.44351373243468,
+      "std_final_loss": 0.0,
+      "mean_runtime_sec": 39.08305234182626,
+      "std_runtime_sec": 0.0,
+      "mean_parameter_count": 2306.0,
+      "vs_full_te": {
+        "avg_final_l2": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_final_linf": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_final_loss": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_runtime_sec": {
+          "delta": 0.0,
+          "status": "neutral"
+        },
+        "avg_parameter_count": {
+          "delta": 0.0,
+          "status": "neutral"
+        }
+      },
+      "vs_classical": {
+        "avg_final_l2": {
+          "delta": -0.11696808498818512,
+          "status": "improves"
+        },
+        "avg_final_linf": {
+          "delta": -0.1395960101218604,
+          "status": "improves"
+        },
+        "avg_final_loss": {
+          "delta": 9.23321299871818,
+          "status": "worsens"
+        },
+        "avg_runtime_sec": {
+          "delta": 23.359626842895523,
+          "status": "worsens"
+        },
+        "avg_parameter_count": {
+          "delta": 65.0,
+          "status": "worsens"
+        }
+      }
+    },
+    {
+      "run_name": "gated_te_pi",
+      "label": "TE-QPINN Gated Residual + PI",
+      "model_type": "te_qpinn_surrogate",
+      "mean_final_l2": 0.674444246258935,
+      "std_final_l2": 0.0,
+      "mean_final_linf": 0.6945702766282709,
+      "std_final_linf": 0.0,
+      "mean_final_loss": 57.51483830970566,
+      "std_final_loss": 0.0,
+      "mean_runtime_sec": 42.93635618407279,
+      "std_runtime_sec": 0.0,
+      "mean_parameter_count": 2307.0,
+      "vs_full_te": {
+        "avg_final_l2": {
+          "delta": -0.21239735773688195,
+          "status": "improves"
+        },
+        "avg_final_linf": {
+          "delta": -0.2516102242647523,
+          "status": "improves"
+        },
+        "avg_final_loss": {
+          "delta": -13.928675422729022,
+          "status": "improves"
+        },
+        "avg_runtime_sec": {
+          "delta": 3.8533038422465324,
+          "status": "worsens"
+        },
+        "avg_parameter_count": {
+          "delta": 1.0,
+          "status": "worsens"
+        }
+      },
+      "vs_classical": {
+        "avg_final_l2": {
+          "delta": -0.32936544272506707,
+          "status": "improves"
+        },
+        "avg_final_linf": {
+          "delta": -0.39120623438661273,
+          "status": "improves"
+        },
+        "avg_final_loss": {
+          "delta": -4.695462424010842,
+          "status": "improves"
+        },
+        "avg_runtime_sec": {
+          "delta": 27.212930685142055,
+          "status": "worsens"
+        },
+        "avg_parameter_count": {
+          "delta": 66.0,
+          "status": "worsens"
+        }
+      }
+    }
+  ]
+}

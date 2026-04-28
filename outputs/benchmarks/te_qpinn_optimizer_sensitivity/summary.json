@@ -1,0 +1,1366 @@
+{
+  "benchmark_config": "configs/benchmark_te_qpinn_optimizer_sensitivity.yaml",
+  "seeds": [
+    42
+  ],
+  "records": [
+    {
+      "run_name": "classical_adam_pi",
+      "label": "Classical + PI (Adam)",
+      "seed": 42,
+      "model_type": "classical",
+      "epochs": 12,
+      "final_epoch": 12,
+      "runtime_sec": 15.701891603181139,
+      "cpu_rss_delta_mb": 917.1171875,
+      "peak_gpu_memory_mb": 22.60498046875,
+      "parameter_count": 2241,
+      "final_loss": 62.2103007337165,
+      "final_l2": 1.003809688984002,
+      "final_linf": 1.0857765110148836,
+      "best_loss": 27.931038460268187,
+      "best_loss_epoch": 8,
+      "best_l2": 1.003809688984002,
+      "best_l2_epoch": 12,
+      "best_linf": 1.0857765110148836,
+      "best_linf_epoch": 12,
+      "config_source": "/root/projects/PINNs/configs/benchmark_te_qpinn_optimizer_classical_adam_pi.yaml",
+      "config_path": "outputs/benchmarks/te_qpinn_optimizer_sensitivity/seed_42/classical_adam_pi/config.generated.yaml",
+      "history": {
+        "loss": [
+          51.688213540552674,
+          51.80592949142185,
+          50.71963560144739,
+          51.617076215771846,
+          49.7678828349703,
+          58.96523888664944,
+          42.60280525567208,
+          27.931038460268187,
+          46.48641836474064,
+          39.60157588923457,
+          57.79788380366777,
+          62.2103007337165
+        ],
+        "l2": [
+          1.2498042686629955,
+          1.2176443895837503,
+          1.186906671082775,
+          1.158474865666184,
+          1.1324874134061773,
+          1.108169476657123,
+          1.085561704707328,
+          1.0650439892912842,
+          1.046565304117458,
+          1.0304680483576538,
+          1.016209019461481,
+          1.003809688984002
+        ],
+        "linf": [
+          1.4974299738840897,
+          1.4577249044054519,
+          1.4172177129954993,
+          1.3781602398966668,
+          1.3410328732334298,
+          1.3036914750848427,
+          1.2657981865805987,
+          1.2287095093556433,
+          1.1907175980240199,
+          1.15538608271314,
+          1.1207890556621347,
+          1.0857765110148836
+        ],
+        "epochs": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "lbfgs_loss": [],
+        "lbfgs_epochs": [],
+        "seed": 42,
+        "data_seed": 42,
+        "model_type": "classical",
+        "parameter_count": 2241,
+        "deterministic_sampling": true,
+        "fixed_collocation": false,
+        "final_loss": 62.2103007337165,
+        "final_l2": 1.003809688984002,
+        "final_linf": 1.0857765110148836,
+        "final_epoch": 12,
+        "lbfgs_enabled": false,
+        "lbfgs_epochs_ran": 0
+      },
+      "run_dir": "outputs/benchmarks/te_qpinn_optimizer_sensitivity/seed_42/classical_adam_pi",
+      "u_pred_heatmap": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_classical_adam_pi_u_pred_heatmap.png",
+      "u_exact_heatmap": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_classical_adam_pi_u_exact_heatmap.png",
+      "abs_error_heatmap": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_classical_adam_pi_abs_error_heatmap.png",
+      "line_slices": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_classical_adam_pi_line_slices.png",
+      "pde_residual_heatmap": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_classical_adam_pi_pde_residual_heatmap.png",
+      "field_eval_npz": "outputs/benchmarks/te_qpinn_optimizer_sensitivity/seed_42/classical_adam_pi/field_eval.npz"
+    },
+    {
+      "run_name": "classical_adam_lbfgs_pi",
+      "label": "Classical + PI (Adam+LBFGS, extended)",
+      "seed": 42,
+      "model_type": "classical",
+      "epochs": 12,
+      "final_epoch": 32,
+      "runtime_sec": 549.772064659046,
+      "cpu_rss_delta_mb": 5.51171875,
+      "peak_gpu_memory_mb": 24.44970703125,
+      "parameter_count": 2241,
+      "final_loss": 0.1611022430406534,
+      "final_l2": 0.08513528320751203,
+      "final_linf": 0.2603776383447869,
+      "best_loss": 0.1611022430406534,
+      "best_loss_epoch": 32,
+      "best_l2": 0.08513528320751203,
+      "best_l2_epoch": 32,
+      "best_linf": 0.2603776383447869,
+      "best_linf_epoch": 32,
+      "config_source": "/root/projects/PINNs/configs/benchmark_te_qpinn_optimizer_classical_adam_lbfgs_pi.yaml",
+      "config_path": "outputs/benchmarks/te_qpinn_optimizer_sensitivity/seed_42/classical_adam_lbfgs_pi/config.generated.yaml",
+      "history": {
+        "loss": [
+          51.688213540552674,
+          51.80592949142185,
+          50.71963560144739,
+          51.617076215771846,
+          49.7678828349703,
+          58.96523888664944,
+          42.60280525567208,
+          27.931038460268187,
+          46.48641836474064,
+          39.60157588923457,
+          57.79788380366777,
+          62.21030073371651
+        ],
+        "l2": [
+          1.2498042686629955,
+          1.2176443895837505,
+          1.186906671082775,
+          1.158474865666184,
+          1.1324874134061773,
+          1.108169476657123,
+          1.085561704707328,
+          1.0650439892912842,
+          1.046565304117458,
+          1.0304680483576538,
+          1.016209019461481,
+          1.003809688984002
+        ],
+        "linf": [
+          1.4974299738840897,
+          1.4577249044054519,
+          1.4172177129954993,
+          1.3781602398966668,
+          1.3410328732334298,
+          1.3036914750848427,
+          1.265798186580599,
+          1.2287095093556433,
+          1.1907175980240199,
+          1.15538608271314,
+          1.1207890556621345,
+          1.0857765110148836
+        ],
+        "epochs": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "lbfgs_loss": [
+          33.14604644143504,
+          18.60896366550815,
+          0.7655548019876278,
+          0.9077853457288992,
+          0.984967668241227,
+          1.031669038969685,
+          0.5923121782758705,
+          0.4735191091501224,
+          0.3928835507727206,
+          0.36077123628270313,
+          0.5541581662080022,
+          0.43777285964569523,
+          0.5557651953995403,
+          0.39618091040405745,
+          0.8824623985666297,
+          0.25538252512548953,
+          0.9637671190015904,
+          0.3184113982042625,
+          0.4938336884405832,
+          0.1611022430406534
+        ],
+        "lbfgs_epochs": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20
+        ],
+        "seed": 42,
+        "data_seed": 42,
+        "model_type": "classical",
+        "parameter_count": 2241,
+        "deterministic_sampling": true,
+        "fixed_collocation": false,
+        "final_loss": 0.1611022430406534,
+        "final_l2": 0.08513528320751203,
+        "final_linf": 0.2603776383447869,
+        "final_epoch": 32,
+        "lbfgs_enabled": true,
+        "lbfgs_epochs_ran": 20
+      },
+      "run_dir": "outputs/benchmarks/te_qpinn_optimizer_sensitivity/seed_42/classical_adam_lbfgs_pi",
+      "u_pred_heatmap": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_classical_adam_lbfgs_pi_u_pred_heatmap.png",
+      "u_exact_heatmap": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_classical_adam_lbfgs_pi_u_exact_heatmap.png",
+      "abs_error_heatmap": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_classical_adam_lbfgs_pi_abs_error_heatmap.png",
+      "line_slices": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_classical_adam_lbfgs_pi_line_slices.png",
+      "pde_residual_heatmap": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_classical_adam_lbfgs_pi_pde_residual_heatmap.png",
+      "field_eval_npz": "outputs/benchmarks/te_qpinn_optimizer_sensitivity/seed_42/classical_adam_lbfgs_pi/field_eval.npz"
+    },
+    {
+      "run_name": "te_fixed_adam_pi",
+      "label": "TE fixed residual 0.10 + PI (Adam)",
+      "seed": 42,
+      "model_type": "te_qpinn_surrogate",
+      "epochs": 12,
+      "final_epoch": 12,
+      "runtime_sec": 40.60950190201402,
+      "cpu_rss_delta_mb": 0.0,
+      "peak_gpu_memory_mb": 27.0205078125,
+      "parameter_count": 2306,
+      "final_loss": 71.44351373243468,
+      "final_l2": 0.8868416039958169,
+      "final_linf": 0.9461805008930232,
+      "best_loss": 22.624903476711964,
+      "best_loss_epoch": 8,
+      "best_l2": 0.8868416039958169,
+      "best_l2_epoch": 12,
+      "best_linf": 0.9461805008930232,
+      "best_linf_epoch": 12,
+      "config_source": "/root/projects/PINNs/configs/benchmark_te_qpinn_optimizer_te_fixed_adam_pi.yaml",
+      "config_path": "outputs/benchmarks/te_qpinn_optimizer_sensitivity/seed_42/te_fixed_adam_pi/config.generated.yaml",
+      "history": {
+        "loss": [
+          132.9896321712021,
+          238.56967074860245,
+          87.54057525398517,
+          68.05594275823546,
+          77.22274924565022,
+          66.06699101177122,
+          37.69015290886919,
+          22.624903476711964,
+          42.901541958894775,
+          37.34960974358103,
+          53.037034329206286,
+          71.44351373243468
+        ],
+        "l2": [
+          2.3137610535327875,
+          2.0516584277301178,
+          1.7923017960792973,
+          1.541141228981637,
+          1.3144644964252659,
+          1.133189047115108,
+          1.011915511809362,
+          0.9588811995466977,
+          0.9396068844928683,
+          0.9253259075537794,
+          0.9073661544782194,
+          0.8868416039958169
+        ],
+        "linf": [
+          2.2528645877863056,
+          2.1109961225325216,
+          1.9515913584065177,
+          1.7760561211518033,
+          1.5898434606240843,
+          1.3998421866094333,
+          1.20980036856624,
+          1.066061177974426,
+          1.0604330536458748,
+          1.045849504779103,
+          1.0063887565258105,
+          0.9461805008930232
+        ],
+        "epochs": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "lbfgs_loss": [],
+        "lbfgs_epochs": [],
+        "seed": 42,
+        "data_seed": 42,
+        "model_type": "te_qpinn_surrogate",
+        "parameter_count": 2306,
+        "deterministic_sampling": true,
+        "fixed_collocation": false,
+        "final_loss": 71.44351373243468,
+        "final_l2": 0.8868416039958169,
+        "final_linf": 0.9461805008930232,
+        "final_epoch": 12,
+        "lbfgs_enabled": false,
+        "lbfgs_epochs_ran": 0
+      },
+      "run_dir": "outputs/benchmarks/te_qpinn_optimizer_sensitivity/seed_42/te_fixed_adam_pi",
+      "u_pred_heatmap": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_te_fixed_adam_pi_u_pred_heatmap.png",
+      "u_exact_heatmap": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_te_fixed_adam_pi_u_exact_heatmap.png",
+      "abs_error_heatmap": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_te_fixed_adam_pi_abs_error_heatmap.png",
+      "line_slices": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_te_fixed_adam_pi_line_slices.png",
+      "pde_residual_heatmap": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_te_fixed_adam_pi_pde_residual_heatmap.png",
+      "field_eval_npz": "outputs/benchmarks/te_qpinn_optimizer_sensitivity/seed_42/te_fixed_adam_pi/field_eval.npz"
+    },
+    {
+      "run_name": "te_fixed_adam_lbfgs_pi",
+      "label": "TE fixed residual 0.10 + PI (Adam+LBFGS, extended)",
+      "seed": 42,
+      "model_type": "te_qpinn_surrogate",
+      "epochs": 12,
+      "final_epoch": 32,
+      "runtime_sec": 1589.7987813649233,
+      "cpu_rss_delta_mb": 78.1640625,
+      "peak_gpu_memory_mb": 29.63427734375,
+      "parameter_count": 2306,
+      "final_loss": 0.0817498677607251,
+      "final_l2": 0.05903507542498608,
+      "final_linf": 0.20913452968552781,
+      "best_loss": 0.0817498677607251,
+      "best_loss_epoch": 32,
+      "best_l2": 0.05903507542498608,
+      "best_l2_epoch": 32,
+      "best_linf": 0.20913452968552781,
+      "best_linf_epoch": 32,
+      "config_source": "/root/projects/PINNs/configs/benchmark_te_qpinn_optimizer_te_fixed_adam_lbfgs_pi.yaml",
+      "config_path": "outputs/benchmarks/te_qpinn_optimizer_sensitivity/seed_42/te_fixed_adam_lbfgs_pi/config.generated.yaml",
+      "history": {
+        "loss": [
+          132.9896321712021,
+          238.56967074860245,
+          87.54057525398517,
+          68.05594275823546,
+          77.22274924565022,
+          66.06699101177122,
+          37.69015290886919,
+          22.624903476711964,
+          42.901541958894775,
+          37.34960974358103,
+          53.037034329206286,
+          71.44351373243468
+        ],
+        "l2": [
+          2.3137610535327875,
+          2.0516584277301178,
+          1.7923017960792973,
+          1.541141228981637,
+          1.3144644964252659,
+          1.133189047115108,
+          1.011915511809362,
+          0.9588811995466977,
+          0.9396068844928683,
+          0.9253259075537794,
+          0.9073661544782194,
+          0.8868416039958169
+        ],
+        "linf": [
+          2.2528645877863056,
+          2.1109961225325216,
+          1.9515913584065177,
+          1.7760561211518033,
+          1.5898434606240843,
+          1.3998421866094333,
+          1.20980036856624,
+          1.066061177974426,
+          1.0604330536458748,
+          1.045849504779103,
+          1.0063887565258105,
+          0.9461805008930232
+        ],
+        "epochs": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "lbfgs_loss": [
+          30.966334646947683,
+          4.643656163501442,
+          0.3734077917167019,
+          0.5133193910377637,
+          0.7196127395950919,
+          0.33973643979758134,
+          0.12046406443574291,
+          0.1703094917472812,
+          0.15163404275632517,
+          0.12541408178194752,
+          0.1494775581947551,
+          0.09128789393879756,
+          0.24826399774820634,
+          0.13489156082956696,
+          0.19910009634777043,
+          0.12444783368048411,
+          0.3862289979945097,
+          0.13281361444441525,
+          0.22984789516767765,
+          0.0817498677607251
+        ],
+        "lbfgs_epochs": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20
+        ],
+        "seed": 42,
+        "data_seed": 42,
+        "model_type": "te_qpinn_surrogate",
+        "parameter_count": 2306,
+        "deterministic_sampling": true,
+        "fixed_collocation": false,
+        "final_loss": 0.0817498677607251,
+        "final_l2": 0.05903507542498608,
+        "final_linf": 0.20913452968552781,
+        "final_epoch": 32,
+        "lbfgs_enabled": true,
+        "lbfgs_epochs_ran": 20
+      },
+      "run_dir": "outputs/benchmarks/te_qpinn_optimizer_sensitivity/seed_42/te_fixed_adam_lbfgs_pi",
+      "u_pred_heatmap": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_te_fixed_adam_lbfgs_pi_u_pred_heatmap.png",
+      "u_exact_heatmap": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_te_fixed_adam_lbfgs_pi_u_exact_heatmap.png",
+      "abs_error_heatmap": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_te_fixed_adam_lbfgs_pi_abs_error_heatmap.png",
+      "line_slices": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_te_fixed_adam_lbfgs_pi_line_slices.png",
+      "pde_residual_heatmap": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_te_fixed_adam_lbfgs_pi_pde_residual_heatmap.png",
+      "field_eval_npz": "outputs/benchmarks/te_qpinn_optimizer_sensitivity/seed_42/te_fixed_adam_lbfgs_pi/field_eval.npz"
+    },
+    {
+      "run_name": "te_layernorm_adam_pi",
+      "label": "TE LayerNorm post_quantum + PI (Adam)",
+      "seed": 42,
+      "model_type": "te_qpinn_surrogate",
+      "epochs": 12,
+      "final_epoch": 12,
+      "runtime_sec": 41.84406907088123,
+      "cpu_rss_delta_mb": 0.0,
+      "peak_gpu_memory_mb": 29.123046875,
+      "parameter_count": 2338,
+      "final_loss": 54.0574409350246,
+      "final_l2": 0.8239010943836619,
+      "final_linf": 0.9576463939619246,
+      "best_loss": 24.121957561384054,
+      "best_loss_epoch": 8,
+      "best_l2": 0.8239010943836619,
+      "best_l2_epoch": 12,
+      "best_linf": 0.9135808691298658,
+      "best_linf_epoch": 10,
+      "config_source": "/root/projects/PINNs/configs/benchmark_te_qpinn_optimizer_te_layernorm_adam_pi.yaml",
+      "config_path": "outputs/benchmarks/te_qpinn_optimizer_sensitivity/seed_42/te_layernorm_adam_pi/config.generated.yaml",
+      "history": {
+        "loss": [
+          124.97651885655972,
+          197.8852178196327,
+          71.99688713652334,
+          53.3443044585766,
+          54.72642300497866,
+          50.06306288355852,
+          35.359070597818736,
+          24.121957561384054,
+          43.35151144625524,
+          36.1674715633136,
+          50.55390133567333,
+          54.0574409350246
+        ],
+        "l2": [
+          2.140902336389074,
+          1.7811124000413618,
+          1.4498880807405568,
+          1.173816043291308,
+          1.0131725404066267,
+          0.9631486541887175,
+          0.9510185440209751,
+          0.9378778630973504,
+          0.9129145199968436,
+          0.8790580760943962,
+          0.8441510073160935,
+          0.8239010943836619
+        ],
+        "linf": [
+          2.2802792202653803,
+          2.0949492302366934,
+          1.8801431340713972,
+          1.6237040938813112,
+          1.3618390034137196,
+          1.1600672582142237,
+          1.1247969104226172,
+          1.0820929133604735,
+          1.0088538418227837,
+          0.9135808691298658,
+          0.9293003214862393,
+          0.9576463939619246
+        ],
+        "epochs": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "lbfgs_loss": [],
+        "lbfgs_epochs": [],
+        "seed": 42,
+        "data_seed": 42,
+        "model_type": "te_qpinn_surrogate",
+        "parameter_count": 2338,
+        "deterministic_sampling": true,
+        "fixed_collocation": false,
+        "final_loss": 54.0574409350246,
+        "final_l2": 0.8239010943836619,
+        "final_linf": 0.9576463939619246,
+        "final_epoch": 12,
+        "lbfgs_enabled": false,
+        "lbfgs_epochs_ran": 0
+      },
+      "run_dir": "outputs/benchmarks/te_qpinn_optimizer_sensitivity/seed_42/te_layernorm_adam_pi",
+      "u_pred_heatmap": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_te_layernorm_adam_pi_u_pred_heatmap.png",
+      "u_exact_heatmap": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_te_layernorm_adam_pi_u_exact_heatmap.png",
+      "abs_error_heatmap": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_te_layernorm_adam_pi_abs_error_heatmap.png",
+      "line_slices": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_te_layernorm_adam_pi_line_slices.png",
+      "pde_residual_heatmap": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_te_layernorm_adam_pi_pde_residual_heatmap.png",
+      "field_eval_npz": "outputs/benchmarks/te_qpinn_optimizer_sensitivity/seed_42/te_layernorm_adam_pi/field_eval.npz"
+    },
+    {
+      "run_name": "te_layernorm_adam_lbfgs_pi",
+      "label": "TE LayerNorm post_quantum + PI (Adam+LBFGS, extended)",
+      "seed": 42,
+      "model_type": "te_qpinn_surrogate",
+      "epochs": 12,
+      "final_epoch": 32,
+      "runtime_sec": 1697.6654683218803,
+      "cpu_rss_delta_mb": 1122.43359375,
+      "peak_gpu_memory_mb": 31.8671875,
+      "parameter_count": 2338,
+      "final_loss": 0.12988334558022074,
+      "final_l2": 0.035359329448984976,
+      "final_linf": 0.10743505618424187,
+      "best_loss": 0.12988334558022074,
+      "best_loss_epoch": 32,
+      "best_l2": 0.035359329448984976,
+      "best_l2_epoch": 32,
+      "best_linf": 0.10743505618424187,
+      "best_linf_epoch": 32,
+      "config_source": "/root/projects/PINNs/configs/benchmark_te_qpinn_optimizer_te_layernorm_adam_lbfgs_pi.yaml",
+      "config_path": "outputs/benchmarks/te_qpinn_optimizer_sensitivity/seed_42/te_layernorm_adam_lbfgs_pi/config.generated.yaml",
+      "history": {
+        "loss": [
+          124.97651885655972,
+          197.88521781963266,
+          71.99688713652334,
+          53.34430445857661,
+          54.72642300497866,
+          50.063062883558516,
+          35.35907059781872,
+          24.121957561384058,
+          43.35151144625527,
+          36.1674715633136,
+          50.55390133567334,
+          54.057440935024616
+        ],
+        "l2": [
+          2.140902336389074,
+          1.7811124000413618,
+          1.449888080740557,
+          1.173816043291308,
+          1.0131725404066267,
+          0.9631486541887175,
+          0.9510185440209753,
+          0.9378778630973506,
+          0.9129145199968438,
+          0.8790580760943963,
+          0.8441510073160936,
+          0.8239010943836619
+        ],
+        "linf": [
+          2.2802792202653803,
+          2.0949492302366934,
+          1.8801431340713974,
+          1.6237040938813112,
+          1.3618390034137198,
+          1.1600672582142233,
+          1.1247969104226176,
+          1.082092913360474,
+          1.0088538418227844,
+          0.9135808691298652,
+          0.929300321486239,
+          0.9576463939619251
+        ],
+        "epochs": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "lbfgs_loss": [
+          28.41650240621921,
+          7.195803916220036,
+          0.5594501103565866,
+          0.6770985227422477,
+          0.47766008946703303,
+          0.4760207905802637,
+          0.09990937392753525,
+          0.3677872418137934,
+          0.3200011610314452,
+          0.5253239846075902,
+          0.1157725685584528,
+          0.3674194342411855,
+          0.33641516132887694,
+          0.2591099196103158,
+          0.20455896509129456,
+          0.09350868198677185,
+          0.5950202497808915,
+          0.21329333787187688,
+          0.18538555196573395,
+          0.12988334558022074
+        ],
+        "lbfgs_epochs": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20
+        ],
+        "seed": 42,
+        "data_seed": 42,
+        "model_type": "te_qpinn_surrogate",
+        "parameter_count": 2338,
+        "deterministic_sampling": true,
+        "fixed_collocation": false,
+        "final_loss": 0.12988334558022074,
+        "final_l2": 0.035359329448984976,
+        "final_linf": 0.10743505618424187,
+        "final_epoch": 32,
+        "lbfgs_enabled": true,
+        "lbfgs_epochs_ran": 20
+      },
+      "run_dir": "outputs/benchmarks/te_qpinn_optimizer_sensitivity/seed_42/te_layernorm_adam_lbfgs_pi",
+      "u_pred_heatmap": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_te_layernorm_adam_lbfgs_pi_u_pred_heatmap.png",
+      "u_exact_heatmap": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_te_layernorm_adam_lbfgs_pi_u_exact_heatmap.png",
+      "abs_error_heatmap": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_te_layernorm_adam_lbfgs_pi_abs_error_heatmap.png",
+      "line_slices": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_te_layernorm_adam_lbfgs_pi_line_slices.png",
+      "pde_residual_heatmap": "outputs/plots/te_qpinn_optimizer_sensitivity/seed_42_te_layernorm_adam_lbfgs_pi_pde_residual_heatmap.png",
+      "field_eval_npz": "outputs/benchmarks/te_qpinn_optimizer_sensitivity/seed_42/te_layernorm_adam_lbfgs_pi/field_eval.npz"
+    }
+  ],
+  "aggregate": {
+    "classical_adam_pi": {
+      "label": "Classical + PI (Adam)",
+      "model_type": "classical",
+      "num_runs": 1,
+      "avg_runtime_sec": 15.701891603181139,
+      "std_runtime_sec": 0.0,
+      "avg_cpu_rss_delta_mb": 917.1171875,
+      "avg_peak_gpu_memory_mb": 22.60498046875,
+      "avg_parameter_count": 2241.0,
+      "avg_final_loss": 62.2103007337165,
+      "std_final_loss": 0.0,
+      "avg_final_l2": 1.003809688984002,
+      "std_final_l2": 0.0,
+      "avg_final_linf": 1.0857765110148836,
+      "std_final_linf": 0.0,
+      "avg_best_l2": 1.003809688984002,
+      "avg_best_linf": 1.0857765110148836,
+      "avg_final_epoch": 12.0
+    },
+    "classical_adam_lbfgs_pi": {
+      "label": "Classical + PI (Adam+LBFGS, extended)",
+      "model_type": "classical",
+      "num_runs": 1,
+      "avg_runtime_sec": 549.772064659046,
+      "std_runtime_sec": 0.0,
+      "avg_cpu_rss_delta_mb": 5.51171875,
+      "avg_peak_gpu_memory_mb": 24.44970703125,
+      "avg_parameter_count": 2241.0,
+      "avg_final_loss": 0.1611022430406534,
+      "std_final_loss": 0.0,
+      "avg_final_l2": 0.08513528320751203,
+      "std_final_l2": 0.0,
+      "avg_final_linf": 0.2603776383447869,
+      "std_final_linf": 0.0,
+      "avg_best_l2": 0.08513528320751203,
+      "avg_best_linf": 0.2603776383447869,
+      "avg_final_epoch": 32.0
+    },
+    "te_fixed_adam_pi": {
+      "label": "TE fixed residual 0.10 + PI (Adam)",
+      "model_type": "te_qpinn_surrogate",
+      "num_runs": 1,
+      "avg_runtime_sec": 40.60950190201402,
+      "std_runtime_sec": 0.0,
+      "avg_cpu_rss_delta_mb": 0.0,
+      "avg_peak_gpu_memory_mb": 27.0205078125,
+      "avg_parameter_count": 2306.0,
+      "avg_final_loss": 71.44351373243468,
+      "std_final_loss": 0.0,
+      "avg_final_l2": 0.8868416039958169,
+      "std_final_l2": 0.0,
+      "avg_final_linf": 0.9461805008930232,
+      "std_final_linf": 0.0,
+      "avg_best_l2": 0.8868416039958169,
+      "avg_best_linf": 0.9461805008930232,
+      "avg_final_epoch": 12.0
+    },
+    "te_fixed_adam_lbfgs_pi": {
+      "label": "TE fixed residual 0.10 + PI (Adam+LBFGS, extended)",
+      "model_type": "te_qpinn_surrogate",
+      "num_runs": 1,
+      "avg_runtime_sec": 1589.7987813649233,
+      "std_runtime_sec": 0.0,
+      "avg_cpu_rss_delta_mb": 78.1640625,
+      "avg_peak_gpu_memory_mb": 29.63427734375,
+      "avg_parameter_count": 2306.0,
+      "avg_final_loss": 0.0817498677607251,
+      "std_final_loss": 0.0,
+      "avg_final_l2": 0.05903507542498608,
+      "std_final_l2": 0.0,
+      "avg_final_linf": 0.20913452968552781,
+      "std_final_linf": 0.0,
+      "avg_best_l2": 0.05903507542498608,
+      "avg_best_linf": 0.20913452968552781,
+      "avg_final_epoch": 32.0
+    },
+    "te_layernorm_adam_pi": {
+      "label": "TE LayerNorm post_quantum + PI (Adam)",
+      "model_type": "te_qpinn_surrogate",
+      "num_runs": 1,
+      "avg_runtime_sec": 41.84406907088123,
+      "std_runtime_sec": 0.0,
+      "avg_cpu_rss_delta_mb": 0.0,
+      "avg_peak_gpu_memory_mb": 29.123046875,
+      "avg_parameter_count": 2338.0,
+      "avg_final_loss": 54.0574409350246,
+      "std_final_loss": 0.0,
+      "avg_final_l2": 0.8239010943836619,
+      "std_final_l2": 0.0,
+      "avg_final_linf": 0.9576463939619246,
+      "std_final_linf": 0.0,
+      "avg_best_l2": 0.8239010943836619,
+      "avg_best_linf": 0.9135808691298658,
+      "avg_final_epoch": 12.0
+    },
+    "te_layernorm_adam_lbfgs_pi": {
+      "label": "TE LayerNorm post_quantum + PI (Adam+LBFGS, extended)",
+      "model_type": "te_qpinn_surrogate",
+      "num_runs": 1,
+      "avg_runtime_sec": 1697.6654683218803,
+      "std_runtime_sec": 0.0,
+      "avg_cpu_rss_delta_mb": 1122.43359375,
+      "avg_peak_gpu_memory_mb": 31.8671875,
+      "avg_parameter_count": 2338.0,
+      "avg_final_loss": 0.12988334558022074,
+      "std_final_loss": 0.0,
+      "avg_final_l2": 0.035359329448984976,
+      "std_final_l2": 0.0,
+      "avg_final_linf": 0.10743505618424187,
+      "std_final_linf": 0.0,
+      "avg_best_l2": 0.035359329448984976,
+      "avg_best_linf": 0.10743505618424187,
+      "avg_final_epoch": 32.0
+    }
+  },
+  "ablation_stats": {
+    "benchmark_config": "configs/benchmark_te_qpinn_optimizer_sensitivity.yaml",
+    "reference_runs": {
+      "classical": "classical_adam_pi",
+      "full_te": "te_fixed_adam_pi"
+    },
+    "rows": [
+      {
+        "run_name": "classical_adam_pi",
+        "label": "Classical + PI (Adam)",
+        "model_type": "classical",
+        "mean_final_l2": 1.003809688984002,
+        "std_final_l2": 0.0,
+        "mean_final_linf": 1.0857765110148836,
+        "std_final_linf": 0.0,
+        "mean_final_loss": 62.2103007337165,
+        "std_final_loss": 0.0,
+        "mean_runtime_sec": 15.701891603181139,
+        "std_runtime_sec": 0.0,
+        "mean_parameter_count": 2241.0,
+        "vs_full_te": {
+          "avg_final_l2": {
+            "delta": 0.11696808498818512,
+            "status": "worsens"
+          },
+          "avg_final_linf": {
+            "delta": 0.1395960101218604,
+            "status": "worsens"
+          },
+          "avg_final_loss": {
+            "delta": -9.23321299871818,
+            "status": "improves"
+          },
+          "avg_runtime_sec": {
+            "delta": -24.90761029883288,
+            "status": "improves"
+          },
+          "avg_parameter_count": {
+            "delta": -65.0,
+            "status": "improves"
+          }
+        },
+        "vs_classical": {
+          "avg_final_l2": {
+            "delta": 0.0,
+            "status": "neutral"
+          },
+          "avg_final_linf": {
+            "delta": 0.0,
+            "status": "neutral"
+          },
+          "avg_final_loss": {
+            "delta": 0.0,
+            "status": "neutral"
+          },
+          "avg_runtime_sec": {
+            "delta": 0.0,
+            "status": "neutral"
+          },
+          "avg_parameter_count": {
+            "delta": 0.0,
+            "status": "neutral"
+          }
+        }
+      },
+      {
+        "run_name": "classical_adam_lbfgs_pi",
+        "label": "Classical + PI (Adam+LBFGS, extended)",
+        "model_type": "classical",
+        "mean_final_l2": 0.08513528320751203,
+        "std_final_l2": 0.0,
+        "mean_final_linf": 0.2603776383447869,
+        "std_final_linf": 0.0,
+        "mean_final_loss": 0.1611022430406534,
+        "std_final_loss": 0.0,
+        "mean_runtime_sec": 549.772064659046,
+        "std_runtime_sec": 0.0,
+        "mean_parameter_count": 2241.0,
+        "vs_full_te": {
+          "avg_final_l2": {
+            "delta": -0.8017063207883048,
+            "status": "improves"
+          },
+          "avg_final_linf": {
+            "delta": -0.6858028625482363,
+            "status": "improves"
+          },
+          "avg_final_loss": {
+            "delta": -71.28241148939402,
+            "status": "improves"
+          },
+          "avg_runtime_sec": {
+            "delta": 509.162562757032,
+            "status": "worsens"
+          },
+          "avg_parameter_count": {
+            "delta": -65.0,
+            "status": "improves"
+          }
+        },
+        "vs_classical": {
+          "avg_final_l2": {
+            "delta": -0.91867440577649,
+            "status": "improves"
+          },
+          "avg_final_linf": {
+            "delta": -0.8253988726700967,
+            "status": "improves"
+          },
+          "avg_final_loss": {
+            "delta": -62.04919849067585,
+            "status": "improves"
+          },
+          "avg_runtime_sec": {
+            "delta": 534.0701730558649,
+            "status": "worsens"
+          },
+          "avg_parameter_count": {
+            "delta": 0.0,
+            "status": "neutral"
+          }
+        }
+      },
+      {
+        "run_name": "te_fixed_adam_pi",
+        "label": "TE fixed residual 0.10 + PI (Adam)",
+        "model_type": "te_qpinn_surrogate",
+        "mean_final_l2": 0.8868416039958169,
+        "std_final_l2": 0.0,
+        "mean_final_linf": 0.9461805008930232,
+        "std_final_linf": 0.0,
+        "mean_final_loss": 71.44351373243468,
+        "std_final_loss": 0.0,
+        "mean_runtime_sec": 40.60950190201402,
+        "std_runtime_sec": 0.0,
+        "mean_parameter_count": 2306.0,
+        "vs_full_te": {
+          "avg_final_l2": {
+            "delta": 0.0,
+            "status": "neutral"
+          },
+          "avg_final_linf": {
+            "delta": 0.0,
+            "status": "neutral"
+          },
+          "avg_final_loss": {
+            "delta": 0.0,
+            "status": "neutral"
+          },
+          "avg_runtime_sec": {
+            "delta": 0.0,
+            "status": "neutral"
+          },
+          "avg_parameter_count": {
+            "delta": 0.0,
+            "status": "neutral"
+          }
+        },
+        "vs_classical": {
+          "avg_final_l2": {
+            "delta": -0.11696808498818512,
+            "status": "improves"
+          },
+          "avg_final_linf": {
+            "delta": -0.1395960101218604,
+            "status": "improves"
+          },
+          "avg_final_loss": {
+            "delta": 9.23321299871818,
+            "status": "worsens"
+          },
+          "avg_runtime_sec": {
+            "delta": 24.90761029883288,
+            "status": "worsens"
+          },
+          "avg_parameter_count": {
+            "delta": 65.0,
+            "status": "worsens"
+          }
+        }
+      },
+      {
+        "run_name": "te_fixed_adam_lbfgs_pi",
+        "label": "TE fixed residual 0.10 + PI (Adam+LBFGS, extended)",
+        "model_type": "te_qpinn_surrogate",
+        "mean_final_l2": 0.05903507542498608,
+        "std_final_l2": 0.0,
+        "mean_final_linf": 0.20913452968552781,
+        "std_final_linf": 0.0,
+        "mean_final_loss": 0.0817498677607251,
+        "std_final_loss": 0.0,
+        "mean_runtime_sec": 1589.7987813649233,
+        "std_runtime_sec": 0.0,
+        "mean_parameter_count": 2306.0,
+        "vs_full_te": {
+          "avg_final_l2": {
+            "delta": -0.8278065285708308,
+            "status": "improves"
+          },
+          "avg_final_linf": {
+            "delta": -0.7370459712074954,
+            "status": "improves"
+          },
+          "avg_final_loss": {
+            "delta": -71.36176386467396,
+            "status": "improves"
+          },
+          "avg_runtime_sec": {
+            "delta": 1549.1892794629093,
+            "status": "worsens"
+          },
+          "avg_parameter_count": {
+            "delta": 0.0,
+            "status": "neutral"
+          }
+        },
+        "vs_classical": {
+          "avg_final_l2": {
+            "delta": -0.9447746135590159,
+            "status": "improves"
+          },
+          "avg_final_linf": {
+            "delta": -0.8766419813293558,
+            "status": "improves"
+          },
+          "avg_final_loss": {
+            "delta": -62.12855086595577,
+            "status": "improves"
+          },
+          "avg_runtime_sec": {
+            "delta": 1574.0968897617422,
+            "status": "worsens"
+          },
+          "avg_parameter_count": {
+            "delta": 65.0,
+            "status": "worsens"
+          }
+        }
+      },
+      {
+        "run_name": "te_layernorm_adam_pi",
+        "label": "TE LayerNorm post_quantum + PI (Adam)",
+        "model_type": "te_qpinn_surrogate",
+        "mean_final_l2": 0.8239010943836619,
+        "std_final_l2": 0.0,
+        "mean_final_linf": 0.9576463939619246,
+        "std_final_linf": 0.0,
+        "mean_final_loss": 54.0574409350246,
+        "std_final_loss": 0.0,
+        "mean_runtime_sec": 41.84406907088123,
+        "std_runtime_sec": 0.0,
+        "mean_parameter_count": 2338.0,
+        "vs_full_te": {
+          "avg_final_l2": {
+            "delta": -0.06294050961215503,
+            "status": "improves"
+          },
+          "avg_final_linf": {
+            "delta": 0.011465893068901445,
+            "status": "worsens"
+          },
+          "avg_final_loss": {
+            "delta": -17.38607279741008,
+            "status": "improves"
+          },
+          "avg_runtime_sec": {
+            "delta": 1.2345671688672155,
+            "status": "worsens"
+          },
+          "avg_parameter_count": {
+            "delta": 32.0,
+            "status": "worsens"
+          }
+        },
+        "vs_classical": {
+          "avg_final_l2": {
+            "delta": -0.17990859460034014,
+            "status": "improves"
+          },
+          "avg_final_linf": {
+            "delta": -0.12813011705295896,
+            "status": "improves"
+          },
+          "avg_final_loss": {
+            "delta": -8.1528597986919,
+            "status": "improves"
+          },
+          "avg_runtime_sec": {
+            "delta": 26.142177467700094,
+            "status": "worsens"
+          },
+          "avg_parameter_count": {
+            "delta": 97.0,
+            "status": "worsens"
+          }
+        }
+      },
+      {
+        "run_name": "te_layernorm_adam_lbfgs_pi",
+        "label": "TE LayerNorm post_quantum + PI (Adam+LBFGS, extended)",
+        "model_type": "te_qpinn_surrogate",
+        "mean_final_l2": 0.035359329448984976,
+        "std_final_l2": 0.0,
+        "mean_final_linf": 0.10743505618424187,
+        "std_final_linf": 0.0,
+        "mean_final_loss": 0.12988334558022074,
+        "std_final_loss": 0.0,
+        "mean_runtime_sec": 1697.6654683218803,
+        "std_runtime_sec": 0.0,
+        "mean_parameter_count": 2338.0,
+        "vs_full_te": {
+          "avg_final_l2": {
+            "delta": -0.8514822745468319,
+            "status": "improves"
+          },
+          "avg_final_linf": {
+            "delta": -0.8387454447087813,
+            "status": "improves"
+          },
+          "avg_final_loss": {
+            "delta": -71.31363038685446,
+            "status": "improves"
+          },
+          "avg_runtime_sec": {
+            "delta": 1657.0559664198663,
+            "status": "worsens"
+          },
+          "avg_parameter_count": {
+            "delta": 32.0,
+            "status": "worsens"
+          }
+        },
+        "vs_classical": {
+          "avg_final_l2": {
+            "delta": -0.968450359535017,
+            "status": "improves"
+          },
+          "avg_final_linf": {
+            "delta": -0.9783414548306417,
+            "status": "improves"
+          },
+          "avg_final_loss": {
+            "delta": -62.08041738813628,
+            "status": "improves"
+          },
+          "avg_runtime_sec": {
+            "delta": 1681.9635767186992,
+            "status": "worsens"
+          },
+          "avg_parameter_count": {
+            "delta": 97.0,
+            "status": "worsens"
+          }
+        }
+      }
+    ]
+  },
+  "optimizer_sensitivity_stats": {
+    "benchmark_config": "configs/benchmark_te_qpinn_optimizer_sensitivity.yaml",
+    "budget_note": "Adam+LBFGS includes an extended optimization budget (Adam stage plus LBFGS fine-tuning) and is not an equal-budget comparison with Adam-only runs.",
+    "rows": [
+      {
+        "variant_id": "classical_pi",
+        "label": "Classical + PI",
+        "adam_run": "classical_adam_pi",
+        "adam_lbfgs_run": "classical_adam_lbfgs_pi",
+        "adam": {
+          "final_l2": 1.003809688984002,
+          "final_linf": 1.0857765110148836,
+          "final_loss": 62.2103007337165,
+          "runtime_sec": 15.701891603181139,
+          "parameter_count": 2241.0
+        },
+        "adam_lbfgs": {
+          "final_l2": 0.08513528320751203,
+          "final_linf": 0.2603776383447869,
+          "final_loss": 0.1611022430406534,
+          "runtime_sec": 549.772064659046,
+          "parameter_count": 2241.0
+        },
+        "delta_adam_lbfgs_minus_adam": {
+          "final_l2": {
+            "delta": -0.91867440577649,
+            "relative_percent": -91.51878248020489,
+            "status": "improves"
+          },
+          "final_linf": {
+            "delta": -0.8253988726700967,
+            "relative_percent": -76.01922350471462,
+            "status": "improves"
+          },
+          "final_loss": {
+            "delta": -62.04919849067585,
+            "relative_percent": -99.74103606454142,
+            "status": "improves"
+          },
+          "runtime_sec": {
+            "delta": 534.0701730558649,
+            "relative_percent": 3401.3110429807357,
+            "status": "worsens"
+          },
+          "parameter_count": {
+            "delta": 0.0,
+            "relative_percent": 0.0,
+            "status": "neutral"
+          }
+        }
+      },
+      {
+        "variant_id": "te_fixed_pi",
+        "label": "TE fixed residual 0.10 + PI",
+        "adam_run": "te_fixed_adam_pi",
+        "adam_lbfgs_run": "te_fixed_adam_lbfgs_pi",
+        "adam": {
+          "final_l2": 0.8868416039958169,
+          "final_linf": 0.9461805008930232,
+          "final_loss": 71.44351373243468,
+          "runtime_sec": 40.60950190201402,
+          "parameter_count": 2306.0
+        },
+        "adam_lbfgs": {
+          "final_l2": 0.05903507542498608,
+          "final_linf": 0.20913452968552781,
+          "final_loss": 0.0817498677607251,
+          "runtime_sec": 1589.7987813649233,
+          "parameter_count": 2306.0
+        },
+        "delta_adam_lbfgs_minus_adam": {
+          "final_l2": {
+            "delta": -0.8278065285708308,
+            "relative_percent": -93.34322215387805,
+            "status": "improves"
+          },
+          "final_linf": {
+            "delta": -0.7370459712074954,
+            "relative_percent": -77.8969732003415,
+            "status": "improves"
+          },
+          "final_loss": {
+            "delta": -71.36176386467396,
+            "relative_percent": -99.8855741221423,
+            "status": "improves"
+          },
+          "runtime_sec": {
+            "delta": 1549.1892794629093,
+            "relative_percent": 3814.844326830016,
+            "status": "worsens"
+          },
+          "parameter_count": {
+            "delta": 0.0,
+            "relative_percent": 0.0,
+            "status": "neutral"
+          }
+        }
+      },
+      {
+        "variant_id": "te_layernorm_post_quantum_pi",
+        "label": "TE LayerNorm post_quantum + PI",
+        "adam_run": "te_layernorm_adam_pi",
+        "adam_lbfgs_run": "te_layernorm_adam_lbfgs_pi",
+        "adam": {
+          "final_l2": 0.8239010943836619,
+          "final_linf": 0.9576463939619246,
+          "final_loss": 54.0574409350246,
+          "runtime_sec": 41.84406907088123,
+          "parameter_count": 2338.0
+        },
+        "adam_lbfgs": {
+          "final_l2": 0.035359329448984976,
+          "final_linf": 0.10743505618424187,
+          "final_loss": 0.12988334558022074,
+          "runtime_sec": 1697.6654683218803,
+          "parameter_count": 2338.0
+        },
+        "delta_adam_lbfgs_minus_adam": {
+          "final_l2": {
+            "delta": -0.7885417649346769,
+            "relative_percent": -95.70830410470126,
+            "status": "improves"
+          },
+          "final_linf": {
+            "delta": -0.8502113377776828,
+            "relative_percent": -88.7813438382233,
+            "status": "improves"
+          },
+          "final_loss": {
+            "delta": -53.92755758944438,
+            "relative_percent": -99.75973086529136,
+            "status": "improves"
+          },
+          "runtime_sec": {
+            "delta": 1655.821399250999,
+            "relative_percent": 3957.1232817872974,
+            "status": "worsens"
+          },
+          "parameter_count": {
+            "delta": 0.0,
+            "relative_percent": 0.0,
+            "status": "neutral"
+          }
+        }
+      }
+    ]
+  }
+}
