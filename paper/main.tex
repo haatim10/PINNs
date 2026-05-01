@@ -38,9 +38,20 @@ Time-fractional integro-differential systems are challenging for neural solvers 
 
 Physics-informed neural networks (PINNs) are a natural starting point because they enforce governing equations through residual-based objectives and can be trained without full mesh-based solvers \cite{PINNs,FracPINN}. However, baseline PINNs may still struggle when memory effects are strong or when representation bias is mismatched to the operator structure. This motivates two complementary extensions: architecture-level changes inspired by TE-QPINN \cite{QNN,QPINN,TEQPINN}, and feature-level priors that encode fractional-memory structure directly.
 
+This final report is built on a staged development history from the earlier project phase. The earlier stage established a reliable fractional-PINN workflow (manufactured solution, IC/BC/PDE loss structure, and baseline convergence checks), including a simpler midpoint-style treatment of the Volterra memory integral and exploratory architecture choices. The present work keeps that mathematical foundation fixed, then upgrades the nonlocal residual treatment with kernel-aware product integration and evaluates TE-inspired and memory-aware extensions under stricter multi-seed fairness and statistical validation.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/fig_midsem_baseline_surface.png}
+\caption{Historical MidSem baseline snapshot (earlier project phase): exact field, baseline PINN prediction, and absolute error surface for the manufactured fractional problem. This figure is included as development context; final claims in this paper are based on the updated fairness-controlled benchmarks.}
+\label{fig:midsem_baseline_surface}
+\end{figure*}
+
 Accordingly, this work builds from a classical fractional PINN and evaluates three questions: (i) whether TE-QPINN-inspired surrogate components improve performance under controlled budgets, (ii) whether analytic memory-aware features provide robust gains, and (iii) how much of any gain is attributable to feature design versus TE-specific architecture. To answer these questions, we include a classical+memory fairness control, staged ablations, multi-seed confirmatory tests, and paired statistical analysis.
 
 Methodologically, we retain the same fractional PDE backbone as the earlier project phase: Caputo/L1 discretization context, product-integration treatment of weakly singular Volterra terms, and manufactured-solution consistency \cite{FracCalc,L1Scheme,ProductIntegration}. We further add an exact PennyLane TE-QPINN feasibility check and a synthetic sparse-CSI forecasting extension to probe application-oriented transfer \cite{CSI,MIMO,LEO}.
+
+The mid-semester baseline work provides the design template for this final report: start from a mathematically transparent fractional PINN, then progressively improve the nonlocal residual discretization (especially the Volterra memory term), and finally evaluate architecture-level extensions under strict fairness controls rather than unconstrained hyperparameter tuning.
 
 \subsection*{Main Contributions}
 \begin{itemize}
@@ -67,6 +78,13 @@ and initial condition
 \begin{equation}
 u(x,0)=0.
 \end{equation}
+Here $D_t^\alpha(\cdot)$ is the Caputo derivative ($0<\alpha<1$), written as
+\begin{equation}
+D_t^\alpha u(x,t)=\frac{1}{\Gamma(1-\alpha)}\int_0^t (t-s)^{-\alpha}\,\partial_s u(x,s)\,ds,
+\end{equation}
+which explicitly encodes nonlocal-in-time memory behavior.
+The Volterra kernel term $(t-s)^{-\beta}$ is weakly singular but integrable for $0<\beta<1$, which is the main reason naive quadrature can become unstable near the upper integration limit even when the PDE is well posed.
+
 The exact-solution family used for manufactured forcing in the benchmark code is
 \begin{equation}
 u_{\text{exact}}(x,t)=t^\alpha\cos(\pi x),
@@ -86,22 +104,86 @@ The baseline PINN maps $(x,t)\mapsto \hat u(x,t)$ and minimizes a composite obje
 \end{equation}
 where $\mathcal{L}_{\text{pde}}$ is built from the residual of the full fractional integro-differential operator.
 
-For the Caputo component, the implementation uses an L1-style history approximation on a graded temporal mesh (to better resolve near-origin singular behavior) \cite{L1Scheme,FracCalc}. For the weakly singular Volterra term, the integral is evaluated with kernel-aware product integration: on each time interval, $u(x,s)$ is approximated linearly while kernel moments are integrated analytically. This reduces singular-kernel quadrature error and keeps the residual differentiable with respect to network parameters \cite{ProductIntegration}.
+Training uses three point sets: interior collocation points for PDE residual, boundary points for $u(0,t),u(1,t)$, and initial points for $u(x,0)$. The residual term is evaluated at collocation points and combined with BC/IC penalties under fixed loss weights for fair cross-model comparison.
+
+For the Caputo component, the implementation uses an L1-style history approximation on a graded temporal mesh (to better resolve near-origin singular behavior) \cite{L1Scheme,FracCalc}. The graded mesh is of the form $t_n=T(n/N)^r$ with grading exponent $r\ge 1$, which increases resolution near $t=0$ where fractional kernels are most singular.
+
+For the weakly singular Volterra term, the integral is evaluated with kernel-aware product integration: on each interval $[t_k,t_{k+1}]$, $u(x,s)$ is linearly interpolated while kernel moments are integrated analytically. This yields a discrete memory operator of the form
+\begin{equation}
+\mathcal{I}_n[u](x)\approx\sum_{k=0}^{n-1} w_{n,k}\,\hat u(x,t_k,t_{k+1}),
+\end{equation}
+where $w_{n,k}$ are kernel-dependent weights and $\hat u(x,t_k,t_{k+1})$ denotes the local linear reconstruction. This reduces singular-kernel quadrature error while preserving differentiability with respect to network parameters \cite{ProductIntegration}.
+
+This design is intentionally grounded in the mid-semester progression: an earlier midpoint-style approximation was useful for initial solver validation, but kernel-aware product integration became necessary once larger grids and stronger memory effects were targeted.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/fig_midsem_training_progress.png}
+\caption{Historical MidSem optimization diagnostics: total and component loss trends with corresponding L2/Linf error history from the earlier-stage baseline run. These curves motivate the later transition to stricter multi-seed confirmatory protocols in the final report.}
+\label{fig:midsem_training_progress}
+\end{figure*}
 
 Boundary and initial losses are evaluated against the manufactured exact conditions. The same PDE construction is reused across classical, TE-inspired, and memory-aware variants so that architecture comparisons do not alter underlying physics constraints.
 
+\begin{table}[t]
+\centering
+\caption{Training/Residual Pipeline (Pseudo-code).}
+\label{tab:algo_pipeline}
+\begin{tabular}{p{0.95\columnwidth}}
+\toprule
+\textbf{Algorithm 1: Fractional PINN Training Loop} \\
+\midrule
+1) Sample collocation, boundary, and initial points (fixed seed).\\
+2) Evaluate model prediction $\hat u(x,t)$ on all point sets.\\
+3) Build Caputo/L1 history term on graded temporal mesh.\\
+4) Build Volterra memory term with product-integration weights.\\
+5) Compute $\mathcal{L}_{\text{pde}}, \mathcal{L}_{\text{bc}}, \mathcal{L}_{\text{ic}}$ and total loss.\\
+6) Backpropagate and update parameters (Adam; optional LBFGS stage).\\
+7) Log L2/Linf/loss/runtime; keep best checkpoints per run.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \section{TE-QPINN-Inspired and Exact PQC Model Variants}
 \subsection{TE-QPINN-Inspired Surrogate Family}
-The TE-inspired surrogate follows a hybrid structure: (i) input rescaling, (ii) trainable embedding network, (iii) quantum-style feature block, and (iv) readout/residual blending. Inputs are affine-rescaled to a stable range (default approximately $[-0.95,0.95]$). A trainable embedding MLP outputs $\phi_i(x,t)$ and constructs angle-style coordinates
+The TE-inspired surrogate is a classical PyTorch model that emulates TE-QPINN design ideas without using a true quantum circuit. Its core pipeline is: (i) input rescaling, (ii) trainable embedding network, (iii) angle-style encoding, (iv) sinusoidal and pairwise mixing features, and (v) expectation-style readout with optional residual blending.
+
+Inputs are affine-rescaled to a stable range (default approximately $[-0.95,0.95]$). A trainable embedding MLP outputs $\phi_i(x,t)$ and constructs angle-style coordinates
 \begin{equation}
 \theta_i=\phi_i(x,t)\cdot \tilde z_i,
 \end{equation}
-where $\tilde z_i$ cycles over scaled coordinates. Quantum-inspired features include $\sin(\theta_i)$, $\cos(\theta_i)$, and optional pairwise terms $\sin(\theta_i)\cos(\theta_{i+1})$. A variational MLP and expectation-style head produce the final prediction.
+where $\tilde z_i$ cycles over scaled coordinates. Quantum-inspired features include $\sin(\theta_i)$, $\cos(\theta_i)$, and entanglement-inspired pairwise terms such as $\sin(\theta_i)\cos(\theta_{i+1})$. A variational mixing block and expectation-style readout head then produce the final prediction.
 
-Residual blending is configurable: fixed additive residual branch or learned gated blending. Additional stabilization includes optional LayerNorm at post-quantum or post-entanglement positions. These switches enable controlled ablation without changing the PDE residual pipeline.
+Residual correction is configurable: fixed additive residual branch or learned gated residual blending. Additional stabilization includes optional LayerNorm at post-quantum or post-entanglement positions. These switches enable controlled ablation without changing the PDE residual pipeline or fairness protocol.
 
 \subsection{Exact PennyLane TE-QPINN Variant}
 An optional exact simulator-based variant is implemented with PennyLane (default.qubit backend), using trainable embedding angles, per-wire rotation blocks (RX/RY/RZ), CNOT entanglement, and expectation-value readout \cite{QNN,QPINN,TEQPINN}. This model is treated as a feasibility track rather than the main benchmark track. In this repository, exact-PQC correctness was verified through forward pass checks, gradient flow checks, and higher-order derivative checks ($u_x$ and $u_{xx}$), then evaluated in a tiny-smoke comparison to quantify practical runtime limits.
+This exact variant is simulator-based and separate from the surrogate path; no hardware-quantum or quantum-speedup claim is made.
+
+\begin{table*}[t]
+\centering
+\caption{Method-family comparison used in this work.}
+\label{tab:method_comparison}
+\begin{tabular}{lllll}
+\toprule
+Model family & Input representation & Quantum-inspired? & Exact PQC? & Main role \\
+\midrule
+Classical PINN & $[x,t]$ & No & No & Baseline reference \\
+Classical + memory & $[x,t,\phi_{\text{mem}}]$ & No & No & Fairness control for memory-feature gains \\
+TE surrogate & $[x,t]$ with embedding/angles & Yes (classical surrogate) & No & Architecture exploration \\
+TE + LayerNorm & TE surrogate + normalization & Yes (classical surrogate) & No & Stabilization variant \\
+TE + memory & TE surrogate + $\phi_{\text{mem}}$ & Yes (classical surrogate) & No & Memory-aware TE diagnostic \\
+Exact PennyLane TE-QPINN & Hybrid FNN + PQC simulator & Yes & Yes (simulator) & Feasibility/bottleneck study \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/fig_method_pipeline.png}
+\caption{Method pipeline overview. The same fractional residual engine is shared across model families; only representation/architecture blocks change, which supports fair attribution of gains.}
+\label{fig:method_pipeline}
+\end{figure*}
 
 \section{Memory-Aware Analytic Feature Design}
 The memory-aware feature set augments local coordinates with fractional-structure-inspired terms:
@@ -155,8 +237,18 @@ TE memory-aware analytic + PI & $0.809505\pm0.176401$ & $1.008622\pm0.232580$ & 
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.9\textwidth]{figures/fig_confirmatory10_summary.png}
-\caption{Ten-seed confirmatory summary. The strongest mean Adam-only results are obtained by the classical+memory baseline; TE memory-aware variants improve over non-memory TE variants but remain slower and do not surpass classical+memory on mean L2/Linf.}
+\begin{subfigure}[t]{0.49\textwidth}
+\centering
+\includegraphics[width=\textwidth]{figures/fig_main_l2_clean.png}
+\caption{Mean$\pm$std final L2 across 10 seeds.}
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.49\textwidth}
+\centering
+\includegraphics[width=\textwidth]{figures/fig_accuracy_runtime_frontier.png}
+\caption{Accuracy-runtime tradeoff frontier.}
+\end{subfigure}
+\caption{Clean confirmatory visualization replacing raw summary panels. Left: classical+memory achieves the best mean Adam-only L2. Right: TE-family variants remain substantially slower, with TE-memory improving over non-memory TE but not surpassing the classical+memory operating point.}
 \label{fig:confirmatory10}
 \end{figure*}
 
@@ -224,16 +316,16 @@ TE LayerNorm + PI & 0.823901 & 0.035359 & 0.957646 & 0.107435 & 54.057441 & 0.12
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.9\textwidth]{figures/fig_optimizer_sensitivity_summary.png}
-\caption{Optimizer sensitivity summary (seed 42). Accuracy improves strongly under Adam+LBFGS for all variants, but with substantial runtime cost; this is an extended-budget comparison rather than an equal-runtime ranking.}
+\includegraphics[width=0.78\textwidth]{figures/fig_optimizer_clean.png}
+\caption{Clean optimizer comparison (seed 42). Adam+LBFGS reduces final L2 for all model families, but this is an extended-budget setting and not an equal-runtime ranking.}
 \label{fig:optimizer}
 \end{figure*}
 
 \subsection{Alpha/Beta Robustness}
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.9\textwidth]{figures/fig_alpha07_beta03_summary.png}
-\caption{Robustness summary at altered fractional setting ($\alpha=0.7,\beta=0.3$). Memory-feature benefit transfers most clearly on the classical track; TE-memory does not generalize as strongly at this setting.}
+\includegraphics[width=0.78\textwidth]{figures/fig_alpha_beta_clean.png}
+\caption{Clean robustness view at $(\alpha,\beta)=(0.7,0.3)$. Memory-feature transfer is clearest for the classical track, while TE-memory does not show the same robustness at this altered fractional setting.}
 \label{fig:alpha_beta}
 \end{figure*}
 
@@ -297,8 +389,8 @@ To assess whether the same memory-aware modeling ideas transfer beyond the fract
 \subsection{Scalar Synthetic CSI Forecasting}
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.9\textwidth]{figures/fig_sparse_csi_showcase.png}
-\caption{Scalar sparse CSI forecasting showcase. Combined memory+domain priors track the forecast region more accurately than a plain time-only MLP baseline under the same training budget.}
+\includegraphics[width=0.86\textwidth]{figures/fig_sparse_csi_clean.png}
+\caption{Clean sparse-CSI forecast showcase. Under matched training budget, the memory+domain model better tracks the future window than a plain time-only baseline.}
 \label{fig:csi_scalar_showcase}
 \end{figure*}
 
@@ -322,10 +414,8 @@ Forecast & MLP + memory + domain & 0.249553 \\
 \subsection{Two-Channel / MIMO-Style Extension}
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.47\textwidth]{figures/fig_mimo_interp_predictions.png}
-\hfill
-\includegraphics[width=0.47\textwidth]{figures/fig_mimo_forecast_predictions.png}
-\caption{Two-channel synthetic sparse CSI prediction. In interpolation (left), domain sinusoidal priors are strongest; in forecast (right), combined memory+domain features perform best.}
+\includegraphics[width=0.9\textwidth]{figures/fig_mimo_clean.png}
+\caption{Clean two-channel synthetic CSI visualization. The interpolation regime favors domain sinusoidal priors, while forecast quality is strongest when memory and domain priors are combined.}
 \label{fig:csi_mimo_preds}
 \end{figure*}
 
@@ -345,20 +435,6 @@ Forecast & MLP + memory + domain & 0.563666 \\
 \vspace{0.5em}
 \footnotesize Source: \texttt{outputs/applications/wireless\_channel\_demo/mimo\_application\_report.md}
 \end{table}
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\columnwidth]{figures/fig_scalar_error_time.png}
-\caption{Scalar absolute-error trajectories. Domain-aware and combined features reduce forecast-window error compared with purely time-only inputs.}
-\label{fig:csi_scalar_error}
-\end{figure}
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=\columnwidth]{figures/fig_scalar_robustness_sweep.png}
-\caption{Scalar robustness sweep across noise and sparsity settings, showing consistent gains from domain-informed and combined feature groups under fixed training budgets.}
-\label{fig:csi_robustness}
-\end{figure}
 
 \section{Discussion}
 The benchmark evidence indicates that analytic memory features are the most reliable improvement mechanism in this study. On the core 10-seed confirmatory benchmark, classical+memory is strongest by mean L2/Linf and remains far more efficient than TE variants. TE memory-aware models improve over non-memory TE baselines in the base setting, but they do not establish superiority over classical+memory under fairness-controlled Adam-only conditions.
