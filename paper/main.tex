@@ -10,8 +10,7 @@
 \usepackage{url}
 \usepackage{hyperref}
 
-\title{Benchmarking Classical, Quantum-Inspired, and Memory-Aware PINNs\\
-for Time-Fractional Integro-Differential Systems with Sparse CSI Forecasting Extensions}
+\title{Memory-Aware Physics-Informed Neural Solvers for Time-Fractional Integro-Differential Systems with Sparse CSI Forecasting Extensions}
 
 \author{
 \IEEEauthorblockN{Author Name(s) Placeholder}
@@ -27,7 +26,7 @@ email@placeholder.edu
 \maketitle
 
 \begin{abstract}
-We study physics-informed neural networks (PINNs) for a time-fractional integro-differential equation with weakly singular memory terms, and evaluate how much performance gain comes from quantum-inspired architecture choices versus analytic memory features. A fairness-controlled benchmark is built around classical PINN, TE-QPINN-inspired surrogate variants, stabilization ablations (residual scaling, gated blending, LayerNorm), and memory-aware analytic feature augmentation. Under Adam-only 10-seed confirmatory evaluation, the strongest mean performance is obtained by the classical model with analytic memory features (final L2 $0.752910\pm0.188977$), while TE memory-aware variants improve over non-memory TE baselines but do not surpass the classical+memory baseline. Paired statistical testing supports the classical-memory improvement over classical baseline (Wilcoxon two-sided $p=0.0371$). A robustness slice at $(\alpha,\beta)=(0.7,0.3)$ shows that memory gains transfer more clearly on the classical track than on the TE track. We also include an exact PennyLane TE-QPINN feasibility check: the model is differentiable (including $u_x,u_{xx}$) but currently computationally impractical in naive tiny-smoke settings. Finally, synthetic sparse CSI forecasting case studies (scalar and two-channel) show that memory/domain-informed features improve application-inspired prediction quality. No quantum-advantage claim is made.
+This paper studies memory-aware physics-informed neural solvers for a time-fractional integro-differential equation with weakly singular history terms. We compare a classical PINN baseline, TE-QPINN-inspired surrogate variants, and analytic memory-feature extensions under a fairness-controlled protocol with matched seeds, collocation points, and training budgets. Across Adam-only 10-seed confirmatory evaluation, the strongest mean accuracy is achieved by the classical model with analytic memory features (final L2 $0.752910\pm0.188977$), while memory-aware TE variants improve over non-memory TE baselines but do not surpass the classical+memory control. Paired testing supports the classical-memory improvement over the classical baseline (Wilcoxon two-sided $p=0.0371$). A robustness slice at $(\alpha,\beta)=(0.7,0.3)$ indicates that memory-feature benefits transfer more clearly on the classical track than on the TE track. We also include an exact PennyLane TE-QPINN feasibility study: forward and higher-order derivative paths are differentiable, but naive simulator-based execution is currently too slow for practical large-scale benchmarking. Finally, synthetic sparse CSI forecasting case studies (scalar and two-channel) show that memory/domain-informed features improve application-inspired prediction quality. No claim of quantum advantage is made.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -35,11 +34,13 @@ Physics-informed neural networks, fractional integro-differential equations, Cap
 \end{IEEEkeywords}
 
 \section{Introduction}
-Fractional and memory-dependent differential systems are difficult for neural solvers because their governing operators are nonlocal in time and induce long-range history coupling. In time-fractional integro-differential settings, numerical stability and error behavior are affected by both the fractional derivative approximation and weakly singular integral handling. Physics-informed neural networks (PINNs) are attractive here because they embed operator structure into training objectives and can be implemented without mesh-based full-order solvers \cite{PINNs,FracPINN}.
+Time-fractional integro-differential systems are challenging for neural solvers because their operators are nonlocal in time and encode long-range memory effects. In practice, this means that approximation quality depends not only on local derivatives but also on stable handling of fractional-history terms and weakly singular kernels. These coupled difficulties make such systems a useful stress test for physics-informed learning methods.
 
-This work starts from a classical fractional PINN baseline and systematically extends it along three directions. First, we implement TE-QPINN-inspired surrogate models to test whether quantum-style embedding and feature mixing improve learning dynamics \cite{QNN,QPINN,TEQPINN}. Second, we introduce analytic memory-aware features tied to $(\alpha,\beta)$ and explicitly include a classical+memory fairness control to separate feature-engineering gains from architecture-specific gains. Third, we evaluate practical transfer through synthetic sparse CSI forecasting demos motivated by communication-channel prediction contexts \cite{CSI,MIMO,LEO}.
+Physics-informed neural networks (PINNs) are a natural starting point because they enforce governing equations through residual-based objectives and can be trained without full mesh-based solvers \cite{PINNs,FracPINN}. However, baseline PINNs may still struggle when memory effects are strong or when representation bias is mismatched to the operator structure. This motivates two complementary extensions: architecture-level changes inspired by TE-QPINN \cite{QNN,QPINN,TEQPINN}, and feature-level priors that encode fractional-memory structure directly.
 
-Methodologically, we retain the fractional PDE backbone from the earlier project phase: Caputo/L1 discretization context, product-integration treatment of weakly singular Volterra terms, and manufactured-solution consistency \cite{FracCalc,L1Scheme,ProductIntegration}. The final emphasis is publication-style evidence: ablations, multi-seed confirmatory validation, paired statistical tests, robustness slices, and an exact PennyLane feasibility comparison with explicit runtime caveats.
+Accordingly, this work builds from a classical fractional PINN and evaluates three questions: (i) whether TE-QPINN-inspired surrogate components improve performance under controlled budgets, (ii) whether analytic memory-aware features provide robust gains, and (iii) how much of any gain is attributable to feature design versus TE-specific architecture. To answer these questions, we include a classical+memory fairness control, staged ablations, multi-seed confirmatory tests, and paired statistical analysis.
+
+Methodologically, we retain the same fractional PDE backbone as the earlier project phase: Caputo/L1 discretization context, product-integration treatment of weakly singular Volterra terms, and manufactured-solution consistency \cite{FracCalc,L1Scheme,ProductIntegration}. We further add an exact PennyLane TE-QPINN feasibility check and a synthetic sparse-CSI forecasting extension to probe application-oriented transfer \cite{CSI,MIMO,LEO}.
 
 \subsection*{Main Contributions}
 \begin{itemize}
@@ -67,6 +68,10 @@ and initial condition
 u(x,0)=0.
 \end{equation}
 The exact-solution family used for manufactured forcing in the benchmark code is
+\begin{equation}
+u_{\text{exact}}(x,t)=t^\alpha\cos(\pi x),
+\end{equation}
+which is the primary manufactured solution used in the core benchmark. For implementation support and controlled difficulty sweeps, the code also supports the generalized family
 \begin{equation}
 u_{\text{exact}}(x,t)=A\,t^{p}\,\cos(k\pi x+\phi),
 \end{equation}
@@ -287,7 +292,7 @@ Exact TE-QPINN PennyLane + PI (tiny) & 251 & 1348.6111 & 206.3259 & 3.918995 & 2
 \end{figure}
 
 \section{Application Case Study: Sparse CSI Forecasting}
-The application extension is intentionally synthetic and application-inspired, motivated by sparse CSI forecasting contexts in wireless/MIMO/LEO settings \cite{CSI,MIMO,LEO}.
+To assess whether the same memory-aware modeling ideas transfer beyond the fractional-PDE benchmark, we include a lightweight sparse-CSI forecasting case study in synthetic time-varying wireless channels. The objective is not deployment-level channel prediction, but a controlled application-inspired test of representation choices under sparse observations and forecast windows relevant to wireless/MIMO/LEO motivation \cite{CSI,MIMO,LEO}.
 
 \subsection{Scalar Synthetic CSI Forecasting}
 \begin{figure*}[t]
@@ -357,6 +362,7 @@ Forecast & MLP + memory + domain & 0.563666 \\
 
 \section{Discussion}
 The benchmark evidence indicates that analytic memory features are the most reliable improvement mechanism in this study. On the core 10-seed confirmatory benchmark, classical+memory is strongest by mean L2/Linf and remains far more efficient than TE variants. TE memory-aware models improve over non-memory TE baselines in the base setting, but they do not establish superiority over classical+memory under fairness-controlled Adam-only conditions.
+The classical+memory control is therefore essential: it isolates memory-feature contribution from TE-architecture contribution and prevents attributing feature-engineering gains to TE design alone.
 
 Stabilization experiments show that TE-side performance is sensitive to architectural details. LayerNorm provides consistent TE improvement relative to fixed TE, while gated blending and residual-scale changes that looked promising in single-seed diagnostics do not generalize robustly across locked multi-seed comparisons. This reinforces the need for strict protocol separation between exploratory diagnostics and confirmatory claims.
 
