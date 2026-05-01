@@ -1,0 +1,600 @@
+{
+  "summary_csv": "/root/projects/PINNs/outputs/benchmarks/te_qpinn_memory_alpha07_beta03_5seed/summary.csv",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "primary_endpoint": "mean final L2 under Adam-only 10-seed validation",
+  "runs": {
+    "classical_pi": {
+      "label": "Classical + PI (alpha=0.7, beta=0.3)",
+      "model_type": "classical",
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "n_runs": 5,
+      "final_l2": {
+        "mean": 0.9351188047344194,
+        "std": 0.05320809725496726,
+        "median": 0.9066333670812912,
+        "best": 0.8935141051827968,
+        "worst": 1.017869426523003
+      },
+      "final_linf": {
+        "mean": 1.0558729865759862,
+        "std": 0.12180829225535487,
+        "median": 1.0248142895277346,
+        "best": 0.937080352521849,
+        "worst": 1.2107950905489544
+      },
+      "final_loss": {
+        "mean": 40.92790417680696,
+        "std": 12.20397367365317,
+        "median": 38.94380036122243,
+        "best": 23.32999639178609,
+        "worst": 56.269542077960296
+      },
+      "runtime_sec": {
+        "mean": 15.772647486999631,
+        "std": 2.0796139571655607,
+        "median": 14.942951567005366,
+        "best": 14.584399268962443,
+        "worst": 19.48288877401501
+      },
+      "parameter_count": 2241.0,
+      "accuracy_per_runtime_l2_runtime_product": 14.74929926554044
+    },
+    "classical_memory_pi": {
+      "label": "Classical + PI + analytic memory (alpha=0.7, beta=0.3)",
+      "model_type": "classical",
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "n_runs": 5,
+      "final_l2": {
+        "mean": 0.8859029057498263,
+        "std": 0.18347199399333694,
+        "median": 0.8334541004978798,
+        "best": 0.7158977322534327,
+        "worst": 1.189432762841163
+      },
+      "final_linf": {
+        "mean": 0.9550704277662069,
+        "std": 0.2364144918493486,
+        "median": 0.9227531349838087,
+        "best": 0.6887592520368783,
+        "worst": 1.3374465954353272
+      },
+      "final_loss": {
+        "mean": 38.57320843873197,
+        "std": 13.828171460435707,
+        "median": 33.21822569312117,
+        "best": 21.91450035086528,
+        "worst": 55.41592652716412
+      },
+      "runtime_sec": {
+        "mean": 18.15482634017244,
+        "std": 0.6639318234726003,
+        "median": 18.074617662932724,
+        "best": 17.61346730403602,
+        "worst": 19.25168962404132
+      },
+      "parameter_count": 2433.0,
+      "accuracy_per_runtime_l2_runtime_product": 16.08341340814225
+    },
+    "te_fixed_pi": {
+      "label": "TE fixed residual 0.10 + PI (alpha=0.7, beta=0.3)",
+      "model_type": "te_qpinn_surrogate",
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "n_runs": 5,
+      "final_l2": {
+        "mean": 1.0254424650639173,
+        "std": 0.11484247574371843,
+        "median": 1.0074089686496421,
+        "best": 0.8975308887817368,
+        "worst": 1.2125302381462983
+      },
+      "final_linf": {
+        "mean": 1.121505614928823,
+        "std": 0.13498407806328064,
+        "median": 1.106146239999263,
+        "best": 0.9574003123165771,
+        "worst": 1.315695961178223
+      },
+      "final_loss": {
+        "mean": 102.66273294034553,
+        "std": 143.95998944692641,
+        "median": 40.50137866701409,
+        "best": 26.072908900965764,
+        "worst": 359.82861105040706
+      },
+      "runtime_sec": {
+        "mean": 43.523145225830376,
+        "std": 1.3877917120814693,
+        "median": 43.120260916883126,
+        "best": 42.10740396915935,
+        "worst": 45.74458489008248
+      },
+      "parameter_count": 2306.0,
+      "accuracy_per_runtime_l2_runtime_product": 44.63048132771036
+    },
+    "te_layernorm_post_quantum_pi": {
+      "label": "TE LayerNorm post_quantum + PI (alpha=0.7, beta=0.3)",
+      "model_type": "te_qpinn_surrogate",
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "n_runs": 5,
+      "final_l2": {
+        "mean": 0.9852351703386903,
+        "std": 0.11301979427498825,
+        "median": 0.9913600097165336,
+        "best": 0.8470999766957531,
+        "worst": 1.1575932393674269
+      },
+      "final_linf": {
+        "mean": 1.070938901966184,
+        "std": 0.10703551655013577,
+        "median": 1.0189028945091436,
+        "best": 0.9776332079160852,
+        "worst": 1.2467903423566393
+      },
+      "final_loss": {
+        "mean": 57.11703564236318,
+        "std": 46.81209922496785,
+        "median": 38.68548380905989,
+        "best": 25.03956250191772,
+        "worst": 139.89178380736823
+      },
+      "runtime_sec": {
+        "mean": 45.94768606740981,
+        "std": 1.1748461799388918,
+        "median": 45.496896793833,
+        "best": 44.73089368920773,
+        "worst": 47.80462502106093
+      },
+      "parameter_count": 2338.0,
+      "accuracy_per_runtime_l2_runtime_product": 45.269276309293176
+    },
+    "te_memory_analytic_pi": {
+      "label": "TE memory-aware analytic + PI (alpha=0.7, beta=0.3)",
+      "model_type": "te_qpinn_surrogate",
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "n_runs": 5,
+      "final_l2": {
+        "mean": 1.087911496266116,
+        "std": 0.16705160237412986,
+        "median": 1.126236504491473,
+        "best": 0.9015568780083304,
+        "worst": 1.3038460227502688
+      },
+      "final_linf": {
+        "mean": 1.218204734381938,
+        "std": 0.22770262782742837,
+        "median": 1.2201888709471667,
+        "best": 0.9492796075785459,
+        "worst": 1.4562719169441594
+      },
+      "final_loss": {
+        "mean": 231.4381774655505,
+        "std": 441.6007137692524,
+        "median": 38.11302612130588,
+        "best": 22.52939637698576,
+        "worst": 1021.308256597926
+      },
+      "runtime_sec": {
+        "mean": 46.435417286260055,
+        "std": 1.3434285590527038,
+        "median": 46.10762922815047,
+        "best": 45.03895468497649,
+        "worst": 48.573890971019864
+      },
+      "parameter_count": 2498.0,
+      "accuracy_per_runtime_l2_runtime_product": 50.517624299636644
+    }
+  },
+  "comparisons": [
+    {
+      "run_a": "te_memory_analytic_pi",
+      "label_a": "TE memory-aware analytic + PI (alpha=0.7, beta=0.3)",
+      "run_b": "te_fixed_pi",
+      "label_b": "TE fixed residual 0.10 + PI (alpha=0.7, beta=0.3)",
+      "paired_seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "win_counts": {
+        "final_l2": {
+          "wins": 2,
+          "ties": 0,
+          "losses": 3,
+          "paired_seeds": 5,
+          "seed_ids": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        "final_linf": {
+          "wins": 2,
+          "ties": 0,
+          "losses": 3,
+          "paired_seeds": 5,
+          "seed_ids": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        }
+      },
+      "paired_differences": {
+        "final_l2_mean_diff_a_minus_b": 0.06246903120219871,
+        "final_linf_mean_diff_a_minus_b": 0.09669911945311478,
+        "final_loss_mean_diff_a_minus_b": 128.775444525205,
+        "runtime_sec_mean_diff_a_minus_b": 2.9122720604296775
+      },
+      "wilcoxon": {
+        "final_l2": {
+          "statistic": 6.0,
+          "pvalue_two_sided": 0.8125,
+          "pvalue_less": 0.6875
+        },
+        "final_linf": {
+          "statistic": 5.0,
+          "pvalue_two_sided": 0.625,
+          "pvalue_less": 0.78125
+        }
+      },
+      "bootstrap_95ci": {
+        "final_l2_mean_diff_a_minus_b": {
+          "mean_diff": 0.06246903120219871,
+          "ci_low": -0.14338126419377356,
+          "ci_high": 0.24776663248977443
+        },
+        "final_linf_mean_diff_a_minus_b": {
+          "mean_diff": 0.09669911945311478,
+          "ci_low": -0.13615189830977256,
+          "ci_high": 0.2957881004378351
+        }
+      },
+      "effect_size": {
+        "paired_cohens_d_final_l2": 0.2492094677615303,
+        "paired_cohens_d_final_linf": 0.3542475367554684
+      }
+    },
+    {
+      "run_a": "te_memory_analytic_pi",
+      "label_a": "TE memory-aware analytic + PI (alpha=0.7, beta=0.3)",
+      "run_b": "te_layernorm_post_quantum_pi",
+      "label_b": "TE LayerNorm post_quantum + PI (alpha=0.7, beta=0.3)",
+      "paired_seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "win_counts": {
+        "final_l2": {
+          "wins": 2,
+          "ties": 0,
+          "losses": 3,
+          "paired_seeds": 5,
+          "seed_ids": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        "final_linf": {
+          "wins": 2,
+          "ties": 0,
+          "losses": 3,
+          "paired_seeds": 5,
+          "seed_ids": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        }
+      },
+      "paired_differences": {
+        "final_l2_mean_diff_a_minus_b": 0.10267632592742597,
+        "final_linf_mean_diff_a_minus_b": 0.14726583241575422,
+        "final_loss_mean_diff_a_minus_b": 174.32114182318736,
+        "runtime_sec_mean_diff_a_minus_b": 0.4877312188502401
+      },
+      "wilcoxon": {
+        "final_l2": {
+          "statistic": 4.0,
+          "pvalue_two_sided": 0.4375,
+          "pvalue_less": 0.84375
+        },
+        "final_linf": {
+          "statistic": 4.0,
+          "pvalue_two_sided": 0.4375,
+          "pvalue_less": 0.84375
+        }
+      },
+      "bootstrap_95ci": {
+        "final_l2_mean_diff_a_minus_b": {
+          "mean_diff": 0.10267632592742597,
+          "ci_low": -0.09986263387614876,
+          "ci_high": 0.3020561333758483
+        },
+        "final_linf_mean_diff_a_minus_b": {
+          "mean_diff": 0.14726583241575422,
+          "ci_low": -0.10207835066208423,
+          "ci_high": 0.39661001549359265
+        }
+      },
+      "effect_size": {
+        "paired_cohens_d_final_l2": 0.3942635343109756,
+        "paired_cohens_d_final_linf": 0.4687356583259453
+      }
+    },
+    {
+      "run_a": "te_memory_analytic_pi",
+      "label_a": "TE memory-aware analytic + PI (alpha=0.7, beta=0.3)",
+      "run_b": "classical_pi",
+      "label_b": "Classical + PI (alpha=0.7, beta=0.3)",
+      "paired_seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "win_counts": {
+        "final_l2": {
+          "wins": 1,
+          "ties": 0,
+          "losses": 4,
+          "paired_seeds": 5,
+          "seed_ids": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        "final_linf": {
+          "wins": 1,
+          "ties": 0,
+          "losses": 4,
+          "paired_seeds": 5,
+          "seed_ids": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        }
+      },
+      "paired_differences": {
+        "final_l2_mean_diff_a_minus_b": 0.1527926915316966,
+        "final_linf_mean_diff_a_minus_b": 0.1623317478059517,
+        "final_loss_mean_diff_a_minus_b": 190.51027328874358,
+        "runtime_sec_mean_diff_a_minus_b": 30.662769799260424
+      },
+      "wilcoxon": {
+        "final_l2": {
+          "statistic": 2.0,
+          "pvalue_two_sided": 0.1875,
+          "pvalue_less": 0.9375
+        },
+        "final_linf": {
+          "statistic": 2.0,
+          "pvalue_two_sided": 0.1875,
+          "pvalue_less": 0.9375
+        }
+      },
+      "bootstrap_95ci": {
+        "final_l2_mean_diff_a_minus_b": {
+          "mean_diff": 0.1527926915316966,
+          "ci_low": -0.009198593844692238,
+          "ci_high": 0.28935729773605307
+        },
+        "final_linf_mean_diff_a_minus_b": {
+          "mean_diff": 0.1623317478059517,
+          "ci_low": -0.027214859304066995,
+          "ci_high": 0.3509520052198981
+        }
+      },
+      "effect_size": {
+        "paired_cohens_d_final_l2": 0.8160601762208971,
+        "paired_cohens_d_final_linf": 0.6408056250163465
+      }
+    },
+    {
+      "run_a": "te_memory_analytic_pi",
+      "label_a": "TE memory-aware analytic + PI (alpha=0.7, beta=0.3)",
+      "run_b": "classical_memory_pi",
+      "label_b": "Classical + PI + analytic memory (alpha=0.7, beta=0.3)",
+      "paired_seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "win_counts": {
+        "final_l2": {
+          "wins": 1,
+          "ties": 0,
+          "losses": 4,
+          "paired_seeds": 5,
+          "seed_ids": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        "final_linf": {
+          "wins": 1,
+          "ties": 0,
+          "losses": 4,
+          "paired_seeds": 5,
+          "seed_ids": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        }
+      },
+      "paired_differences": {
+        "final_l2_mean_diff_a_minus_b": 0.20200859051628983,
+        "final_linf_mean_diff_a_minus_b": 0.2631343066157311,
+        "final_loss_mean_diff_a_minus_b": 192.86496902681856,
+        "runtime_sec_mean_diff_a_minus_b": 28.280590946087614
+      },
+      "wilcoxon": {
+        "final_l2": {
+          "statistic": 2.0,
+          "pvalue_two_sided": 0.1875,
+          "pvalue_less": 0.9375
+        },
+        "final_linf": {
+          "statistic": 2.0,
+          "pvalue_two_sided": 0.1875,
+          "pvalue_less": 0.9375
+        }
+      },
+      "bootstrap_95ci": {
+        "final_l2_mean_diff_a_minus_b": {
+          "mean_diff": 0.20200859051628983,
+          "ci_low": -0.04472540573486885,
+          "ci_high": 0.38708944256574124
+        },
+        "final_linf_mean_diff_a_minus_b": {
+          "mean_diff": 0.2631343066157311,
+          "ci_low": -0.09566180705735046,
+          "ci_high": 0.523222755096567
+        }
+      },
+      "effect_size": {
+        "paired_cohens_d_final_l2": 0.7370686040111977,
+        "paired_cohens_d_final_linf": 0.6623787775581143
+      }
+    },
+    {
+      "run_a": "classical_memory_pi",
+      "label_a": "Classical + PI + analytic memory (alpha=0.7, beta=0.3)",
+      "run_b": "classical_pi",
+      "label_b": "Classical + PI (alpha=0.7, beta=0.3)",
+      "paired_seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "win_counts": {
+        "final_l2": {
+          "wins": 3,
+          "ties": 0,
+          "losses": 2,
+          "paired_seeds": 5,
+          "seed_ids": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        "final_linf": {
+          "wins": 4,
+          "ties": 0,
+          "losses": 1,
+          "paired_seeds": 5,
+          "seed_ids": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        }
+      },
+      "paired_differences": {
+        "final_l2_mean_diff_a_minus_b": -0.0492158989845932,
+        "final_linf_mean_diff_a_minus_b": -0.1008025588097794,
+        "final_loss_mean_diff_a_minus_b": -2.3546957380749896,
+        "runtime_sec_mean_diff_a_minus_b": 2.382178853172809
+      },
+      "wilcoxon": {
+        "final_l2": {
+          "statistic": 5.0,
+          "pvalue_two_sided": 0.625,
+          "pvalue_less": 0.3125
+        },
+        "final_linf": {
+          "statistic": 5.0,
+          "pvalue_two_sided": 0.625,
+          "pvalue_less": 0.3125
+        }
+      },
+      "bootstrap_95ci": {
+        "final_l2_mean_diff_a_minus_b": {
+          "mean_diff": -0.0492158989845932,
+          "ci_low": -0.20306652438322859,
+          "ci_high": 0.14955651797702862
+        },
+        "final_linf_mean_diff_a_minus_b": {
+          "mean_diff": -0.1008025588097794,
+          "ci_low": -0.3119803744369622,
+          "ci_high": 0.17124610457430345
+        }
+      },
+      "effect_size": {
+        "paired_cohens_d_final_l2": -0.22483359723772853,
+        "paired_cohens_d_final_linf": -0.32545174801821974
+      }
+    }
+  ]
+}

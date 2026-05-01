@@ -42,6 +42,14 @@ Full raw outputs remain under `outputs/plots/` for complete reproducibility.
   Source: `outputs/plots/te_qpinn_memory_confirmatory_10seed/error_heatmaps_seed_42_classical_vs_te_qpinn.png`  
   Representative absolute-error side-by-side comparison from the 10-seed confirmatory run.
 
+- `alpha07_beta03_summary.png`  
+  Source: `outputs/plots/te_qpinn_memory_alpha07_beta03_5seed/summary_panels.png`  
+  Summarizes the locked alpha/beta robustness run at `(alpha,beta)=(0.7,0.3)` across classical, classical+memory, and TE variants.
+
+- `alpha07_beta03_error_heatmap.png`  
+  Source: `outputs/plots/te_qpinn_memory_alpha07_beta03_5seed/error_heatmaps_seed_0_classical_vs_te_qpinn.png`  
+  Representative side-by-side absolute-error heatmap comparison from the robustness run (seed 0 view).
+
 - `best_te_vs_classical_error_heatmap.png`  
   Source: `outputs/plots/te_qpinn_memory_smoke/error_heatmaps_seed_42_classical_vs_te_qpinn.png`  
   Side-by-side absolute-error heatmaps for Classical + PI versus the best TE variant selected for that seed.
@@ -53,5 +61,6 @@ Memory-aware figures now include both:
 - **single-seed smoke** diagnostics (seed 42), and
 - **locked 5-seed validation** artifacts,
 - **locked 10-seed confirmatory** artifacts.
+- **locked alpha/beta robustness** artifacts at `(alpha,beta)=(0.7,0.3)`.
 
 The smoke results remain preliminary by themselves; the ten-seed confirmatory summary should be used for strongest conclusions.

@@ -462,3 +462,93 @@ An exact paper-aligned PennyLane TE-QPINN model was integrated as an optional mo
 3. In this tiny smoke setup, exact PQC is much slower and less accurate than the classical tiny baseline.
 4. This is a feasibility/bottleneck result, not a performance-success result.
 5. Practical benchmark progress should continue on the memory-aware classical/surrogate tracks while exact PQC runtime bottlenecks are addressed.
+
+## 19. Statistical Analysis of Memory-Aware Confirmatory Results
+
+Using existing 10-seed outputs only (`outputs/benchmarks/te_qpinn_memory_confirmatory_10seed/summary.csv`), paired statistical tests were computed for the primary endpoint (final L2, lower is better).
+
+Artifacts:
+
+- `outputs/benchmarks/te_qpinn_memory_confirmatory_10seed/statistical_tests.json`
+- `outputs/benchmarks/te_qpinn_memory_confirmatory_10seed/statistical_tests.md`
+
+### Requested paired comparisons (final L2)
+
+| Comparison | Mean Diff (A-B) | Median Diff (A-B) | Wilcoxon p (two-sided) | Wilcoxon p (A<B) | Bootstrap 95% CI for Mean Diff | Paired Cohen's d | Cliff's delta | Wins A |
+| --- | ---: | ---: | ---: | ---: | --- | ---: | ---: | ---: |
+| Classical + memory vs Classical | -0.169920 | -0.183730 | 0.037109 | 0.018555 | [-0.292771, -0.049636] | -0.8321 | -0.6400 | 9/10 |
+| TE memory analytic vs TE LayerNorm non-memory | -0.108698 | -0.089811 | 0.160156 | 0.080078 | [-0.227282, 0.004445] | -0.5493 | -0.3400 | 6/10 |
+| TE memory analytic vs TE fixed | -0.146024 | -0.136400 | 0.130859 | 0.065430 | [-0.266543, -0.030561] | -0.7181 | -0.4800 | 6/10 |
+| TE memory analytic vs Classical + memory | +0.056595 | +0.116844 | 0.695312 | 0.687500 | [-0.092482, 0.195866] | +0.2301 | +0.1200 | 3/10 |
+
+Notes:
+
+- Differences are reported as `A - B`; negative values favor A on final L2.
+- `p(A<B)` is the one-sided Wilcoxon test for A having lower final L2 than B.
+
+### Interpretation
+
+1. **Classical + memory vs Classical:** the paired tests support a meaningful improvement for the classical PINN when analytic memory features are added (negative mean/median differences, CI below zero, `p=0.0371` two-sided, 9/10 wins).
+2. **TE memory vs TE non-memory baselines:** TE memory analytic improves over both TE LayerNorm non-memory and TE fixed in mean/median and win count (6/10 for both), with stronger evidence versus TE fixed (bootstrap CI below zero), while the Wilcoxon p-values are borderline/non-significant at 0.05 in this 10-seed setting.
+3. **TE memory vs Classical + memory:** TE memory does not beat Classical + memory (positive mean/median difference, 3/10 wins, wide CI crossing zero, non-significant Wilcoxon).
+4. Overall, these statistics support that memory features help both tracks, and they support TE-memory improvement over TE non-memory baselines, but **TE-specific superiority over the strongest classical memory baseline is not established**.
+5. No quantum advantage claim is warranted; this remains a simulator-based quantum-inspired study.
+
+## 20. Alpha/Beta Robustness Test: alpha=0.7, beta=0.3 (Phase 10C)
+
+A locked 5-seed robustness run was completed with:
+
+- `problem.alpha = 0.7`
+- `problem.beta = 0.3`
+- `solution.time_power = 0.7`
+- seeds `[0, 1, 2, 3, 4]`
+
+using `configs/benchmark_te_qpinn_memory_alpha07_beta03_5seed.yaml`.
+
+Compared variants:
+
+1. Classical + PI
+2. Classical + PI + analytic memory
+3. TE fixed residual 0.10 + PI
+4. TE LayerNorm post_quantum + PI
+5. TE memory-aware analytic + PI
+
+### Aggregate results
+
+| Variant | Mean Final L2 | Std L2 | Mean Final Linf | Std Linf | Mean Final Loss | Std Loss | Mean Runtime (s) | Std Runtime (s) | Params |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Classical + PI | 0.935119 | 0.053208 | 1.055873 | 0.121808 | 40.927904 | 12.203974 | 15.7726 | 2.0796 | 2241 |
+| Classical + PI + analytic memory | 0.885903 | 0.183472 | 0.955070 | 0.236414 | 38.573208 | 13.828171 | 18.1548 | 0.6639 | 2433 |
+| TE fixed residual 0.10 + PI | 1.025442 | 0.114842 | 1.121506 | 0.134984 | 102.662733 | 143.959989 | 43.5231 | 1.3878 | 2306 |
+| TE LayerNorm post_quantum + PI | 0.985235 | 0.113020 | 1.070939 | 0.107036 | 57.117036 | 46.812099 | 45.9477 | 1.1748 | 2338 |
+| TE memory-aware analytic + PI | 1.087911 | 0.167052 | 1.218205 | 0.227703 | 231.438177 | 441.600714 | 46.4354 | 1.3434 | 2498 |
+
+Primary endpoint (mean final L2): **Classical + PI + analytic memory** is best (`0.885903`).
+
+### Required pairwise interpretation
+
+1. **Classical + memory vs Classical**  
+   - Directionally better means for both L2 and Linf.  
+   - Win counts: L2 `3/5`, Linf `4/5`.  
+   - Paired Wilcoxon on L2 is not significant at 0.05 (`p=0.625`, small sample), but direction remains favorable.
+
+2. **TE memory vs TE LayerNorm non-memory**  
+   - TE memory is worse on mean L2 (`1.0879` vs `0.9852`) and mean Linf (`1.2182` vs `1.0709`).  
+   - Win counts: L2 `2/5`, Linf `2/5`.  
+   - No statistical support for memory-TE improvement at this alpha/beta pair.
+
+3. **TE memory vs Classical**  
+   - TE memory is worse on mean L2, mean Linf, and runtime.
+   - Win counts: L2 `1/5`, Linf `1/5`.
+
+4. **TE memory vs Classical + memory**  
+   - TE memory is clearly worse on mean L2/Linf/loss and much slower.  
+   - Win counts: L2 `1/5`, Linf `1/5`.
+
+### Robustness conclusion for alpha=0.7, beta=0.3
+
+- Memory-feature benefits **partially transfer** for the classical track (improved mean L2/Linf vs classical baseline).
+- The prior TE-memory signal **does not transfer** here; TE memory underperforms TE LayerNorm non-memory on means and win counts.
+- TE memory also shows high variance and unstable losses at this setting (very large std for final loss).
+- Therefore, for `(alpha,beta)=(0.7,0.3)`, TE-specific superiority is **not established**.
+- No quantum-advantage claim is warranted.

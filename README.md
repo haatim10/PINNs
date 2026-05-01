@@ -177,6 +177,26 @@ Interpretation:
 - Current evidence supports **memory-feature usefulness** on this benchmark; TE-specific superiority is **not** established.
 - Full confirmatory details and statistical tests: `docs/te_qpinn_benchmark_analysis.md`.
 
+### F) Alpha/Beta Robustness Snapshot (5 Seeds, alpha=0.7, beta=0.3)
+
+| Variant | Final L2 (mean ± std) | Final Linf (mean ± std) | Final Loss (mean ± std) | Runtime (s, mean ± std) |
+| --- | ---: | ---: | ---: | ---: |
+| Classical + PI | 0.935119 ± 0.053208 | 1.055873 ± 0.121808 | 40.927904 ± 12.203974 | 15.7726 ± 2.0796 |
+| Classical + PI + analytic memory | 0.885903 ± 0.183472 | 0.955070 ± 0.236414 | 38.573208 ± 13.828171 | 18.1548 ± 0.6639 |
+| TE LayerNorm post_quantum + PI | 0.985235 ± 0.113020 | 1.070939 ± 0.107036 | 57.117036 ± 46.812099 | 45.9477 ± 1.1748 |
+| TE memory-aware analytic + PI | 1.087911 ± 0.167052 | 1.218205 ± 0.227703 | 231.438177 ± 441.600714 | 46.4354 ± 1.3434 |
+
+Interpretation:
+
+- At this second fractional setting, classical + analytic memory is the strongest model by mean L2/Linf.
+- TE memory-aware analytic does not outperform TE LayerNorm non-memory here, so TE-specific memory superiority is not supported.
+- This robustness slice supports memory-feature usefulness overall, but also shows seed/setting sensitivity.
+
+See full robustness details and paired tests:
+
+- `docs/te_qpinn_benchmark_analysis.md`
+- `outputs/benchmarks/te_qpinn_memory_alpha07_beta03_5seed/statistical_tests.md`
+
 ## Key Figures
 
 Curated plots are collected in: `outputs/plots/key_results/`
@@ -255,6 +275,12 @@ Memory-aware confirmatory 10-seed (Phase 8E):
 python scripts/benchmark_te_qpinn.py --benchmark-config configs/benchmark_te_qpinn_memory_confirmatory_10seed.yaml --resume-incomplete
 ```
 
+Alpha/Beta robustness 5-seed (Phase 10C, alpha=0.7 beta=0.3):
+
+```bash
+python scripts/benchmark_te_qpinn.py --benchmark-config configs/benchmark_te_qpinn_memory_alpha07_beta03_5seed.yaml --resume-incomplete
+```
+
 Exact PennyLane TE-QPINN smoke (Phase 9B Milestone A):
 
 ```bash
@@ -269,12 +295,14 @@ python scripts/benchmark_te_qpinn.py --benchmark-config configs/benchmark_te_qpi
 - `outputs/benchmarks/te_qpinn_memory_smoke/`
 - `outputs/benchmarks/te_qpinn_memory_multiseed/`
 - `outputs/benchmarks/te_qpinn_memory_confirmatory_10seed/`
+- `outputs/benchmarks/te_qpinn_memory_alpha07_beta03_5seed/`
 - `outputs/plots/te_qpinn_multiseed/`
 - `outputs/plots/te_qpinn_layernorm_multiseed/`
 - `outputs/plots/te_qpinn_optimizer_sensitivity/`
 - `outputs/plots/te_qpinn_memory_smoke/`
 - `outputs/plots/te_qpinn_memory_multiseed/`
 - `outputs/plots/te_qpinn_memory_confirmatory_10seed/`
+- `outputs/plots/te_qpinn_memory_alpha07_beta03_5seed/`
 - `outputs/plots/key_results/`
 - `docs/te_qpinn_benchmark_analysis.md`
 - `docs/te_qpinn_memory_aware_plan.md`

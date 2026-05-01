@@ -1,0 +1,208 @@
+{
+  "benchmark_config": "configs/benchmark_te_qpinn_memory_alpha07_beta03_5seed.yaml",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "reference_runs": {
+    "classical": "classical_pi",
+    "full_te": "te_fixed_pi"
+  },
+  "runs": [
+    {
+      "run_name": "classical_pi",
+      "label": "Classical + PI (alpha=0.7, beta=0.3)",
+      "model_type": "classical",
+      "mean_final_l2": 0.9351188047344194,
+      "std_final_l2": 0.05320809725496726,
+      "mean_final_linf": 1.0558729865759862,
+      "std_final_linf": 0.12180829225535489,
+      "mean_final_loss": 40.92790417680696,
+      "std_final_loss": 12.20397367365317,
+      "mean_runtime_sec": 15.772647486999631,
+      "std_runtime_sec": 2.0796139571655607,
+      "mean_parameter_count": 2241.0,
+      "wins": {
+        "vs_full_te": {
+          "final_l2": {
+            "wins": 4,
+            "ties": 0,
+            "losses": 1,
+            "paired_seeds": 5
+          },
+          "final_linf": {
+            "wins": 3,
+            "ties": 0,
+            "losses": 2,
+            "paired_seeds": 5
+          }
+        }
+      }
+    },
+    {
+      "run_name": "classical_memory_pi",
+      "label": "Classical + PI + analytic memory (alpha=0.7, beta=0.3)",
+      "model_type": "classical",
+      "mean_final_l2": 0.8859029057498263,
+      "std_final_l2": 0.18347199399333694,
+      "mean_final_linf": 0.9550704277662069,
+      "std_final_linf": 0.2364144918493486,
+      "mean_final_loss": 38.57320843873197,
+      "std_final_loss": 13.828171460435707,
+      "mean_runtime_sec": 18.15482634017244,
+      "std_runtime_sec": 0.6639318234726004,
+      "mean_parameter_count": 2433.0,
+      "wins": {
+        "vs_classical": {
+          "final_l2": {
+            "wins": 3,
+            "ties": 0,
+            "losses": 2,
+            "paired_seeds": 5
+          },
+          "final_linf": {
+            "wins": 4,
+            "ties": 0,
+            "losses": 1,
+            "paired_seeds": 5
+          }
+        },
+        "vs_full_te": {
+          "final_l2": {
+            "wins": 3,
+            "ties": 0,
+            "losses": 2,
+            "paired_seeds": 5
+          },
+          "final_linf": {
+            "wins": 4,
+            "ties": 0,
+            "losses": 1,
+            "paired_seeds": 5
+          }
+        }
+      }
+    },
+    {
+      "run_name": "te_fixed_pi",
+      "label": "TE fixed residual 0.10 + PI (alpha=0.7, beta=0.3)",
+      "model_type": "te_qpinn_surrogate",
+      "mean_final_l2": 1.0254424650639173,
+      "std_final_l2": 0.11484247574371843,
+      "mean_final_linf": 1.121505614928823,
+      "std_final_linf": 0.13498407806328064,
+      "mean_final_loss": 102.66273294034553,
+      "std_final_loss": 143.95998944692644,
+      "mean_runtime_sec": 43.523145225830376,
+      "std_runtime_sec": 1.3877917120814693,
+      "mean_parameter_count": 2306.0,
+      "wins": {
+        "vs_classical": {
+          "final_l2": {
+            "wins": 1,
+            "ties": 0,
+            "losses": 4,
+            "paired_seeds": 5
+          },
+          "final_linf": {
+            "wins": 2,
+            "ties": 0,
+            "losses": 3,
+            "paired_seeds": 5
+          }
+        }
+      }
+    },
+    {
+      "run_name": "te_layernorm_post_quantum_pi",
+      "label": "TE LayerNorm post_quantum + PI (alpha=0.7, beta=0.3)",
+      "model_type": "te_qpinn_surrogate",
+      "mean_final_l2": 0.9852351703386903,
+      "std_final_l2": 0.11301979427498825,
+      "mean_final_linf": 1.070938901966184,
+      "std_final_linf": 0.10703551655013577,
+      "mean_final_loss": 57.11703564236318,
+      "std_final_loss": 46.81209922496785,
+      "mean_runtime_sec": 45.94768606740981,
+      "std_runtime_sec": 1.1748461799388918,
+      "mean_parameter_count": 2338.0,
+      "wins": {
+        "vs_classical": {
+          "final_l2": {
+            "wins": 2,
+            "ties": 0,
+            "losses": 3,
+            "paired_seeds": 5
+          },
+          "final_linf": {
+            "wins": 2,
+            "ties": 0,
+            "losses": 3,
+            "paired_seeds": 5
+          }
+        },
+        "vs_full_te": {
+          "final_l2": {
+            "wins": 5,
+            "ties": 0,
+            "losses": 0,
+            "paired_seeds": 5
+          },
+          "final_linf": {
+            "wins": 3,
+            "ties": 0,
+            "losses": 2,
+            "paired_seeds": 5
+          }
+        }
+      }
+    },
+    {
+      "run_name": "te_memory_analytic_pi",
+      "label": "TE memory-aware analytic + PI (alpha=0.7, beta=0.3)",
+      "model_type": "te_qpinn_surrogate",
+      "mean_final_l2": 1.087911496266116,
+      "std_final_l2": 0.16705160237412986,
+      "mean_final_linf": 1.218204734381938,
+      "std_final_linf": 0.22770262782742834,
+      "mean_final_loss": 231.4381774655505,
+      "std_final_loss": 441.6007137692525,
+      "mean_runtime_sec": 46.435417286260055,
+      "std_runtime_sec": 1.3434285590527038,
+      "mean_parameter_count": 2498.0,
+      "wins": {
+        "vs_classical": {
+          "final_l2": {
+            "wins": 1,
+            "ties": 0,
+            "losses": 4,
+            "paired_seeds": 5
+          },
+          "final_linf": {
+            "wins": 1,
+            "ties": 0,
+            "losses": 4,
+            "paired_seeds": 5
+          }
+        },
+        "vs_full_te": {
+          "final_l2": {
+            "wins": 2,
+            "ties": 0,
+            "losses": 3,
+            "paired_seeds": 5
+          },
+          "final_linf": {
+            "wins": 2,
+            "ties": 0,
+            "losses": 3,
+            "paired_seeds": 5
+          }
+        }
+      }
+    }
+  ]
+}

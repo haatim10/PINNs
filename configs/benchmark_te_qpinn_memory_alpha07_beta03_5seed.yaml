@@ -1,0 +1,24 @@
+# Phase 10C locked 5-seed robustness validation (alpha=0.7, beta=0.3)
+
+seeds: [0, 1, 2, 3, 4]
+device: auto
+output_dir: outputs/benchmarks/te_qpinn_memory_alpha07_beta03_5seed
+plots_dir: outputs/plots/te_qpinn_memory_alpha07_beta03_5seed
+report_name: benchmark_report.md
+
+runs:
+  - name: classical_pi
+    label: Classical + PI (alpha=0.7, beta=0.3)
+    config: configs/benchmark_te_qpinn_50_classical_pi_alpha07_beta03.yaml
+  - name: classical_memory_pi
+    label: Classical + PI + analytic memory (alpha=0.7, beta=0.3)
+    config: configs/benchmark_te_qpinn_50_classical_pi_memory_analytic_alpha07_beta03.yaml
+  - name: te_fixed_pi
+    label: TE fixed residual 0.10 + PI (alpha=0.7, beta=0.3)
+    config: configs/benchmark_te_qpinn_50_surrogate_pi_alpha07_beta03.yaml
+  - name: te_layernorm_post_quantum_pi
+    label: TE LayerNorm post_quantum + PI (alpha=0.7, beta=0.3)
+    config: configs/benchmark_te_qpinn_50_surrogate_pi_layernorm_post_quantum_alpha07_beta03.yaml
+  - name: te_memory_analytic_pi
+    label: TE memory-aware analytic + PI (alpha=0.7, beta=0.3)
+    config: configs/benchmark_te_qpinn_50_surrogate_pi_memory_analytic_alpha07_beta03.yaml

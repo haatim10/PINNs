@@ -1,0 +1,69 @@
+problem:
+  type: integro_differential
+  alpha: 0.7
+  beta: 0.3
+  x_min: 0.0
+  x_max: 1.0
+  t_max: 1.0
+  mesh_grading: 2.0
+  solution:
+    family: cosine
+    spatial_frequency: 1.0
+    time_power: 0.7
+    amplitude: 1.0
+    phase: 0.0
+discretization:
+  N_x: 50
+  N_t: 50
+  N_collocation: 32
+  N_boundary: 16
+  N_initial: 16
+  N_integral_quad: 10
+network:
+  model_type: classical
+  input_dim: 2
+  output_dim: 1
+  hidden_layers:
+  - 32
+  - 32
+  - 32
+  activation: tanh
+  memory_features: analytic
+  memory_feature_set: basic_fractional
+  memory_epsilon: 1.0e-08
+  memory_feature_normalization: scale
+training:
+  epochs: 12
+  learning_rate: 0.0005
+  scheduler:
+    enabled: false
+    type: cosine_warmup
+    warmup_epochs: 1
+    min_lr: 1.0e-05
+  lbfgs:
+    enabled: false
+    epochs: 0
+    lr: 1.0
+    max_iter: 20
+    history_size: 50
+  weights:
+    pde: 1.0
+    bc: 20.0
+    ic: 20.0
+logging:
+  eval_interval: 1
+  checkpoint_interval: 1000
+  track_points: false
+  points_file: outputs/benchmarks/te_qpinn_memory_alpha07_beta03_5seed/unused_points.csv
+  track_l1_points: false
+  l1_points_file: outputs/benchmarks/te_qpinn_memory_alpha07_beta03_5seed/unused_l1_points.csv
+reproducibility:
+  deterministic_torch: true
+  deterministic_sampling: true
+  fixed_collocation: false
+  data_seed: 1
+paths:
+  checkpoint_dir: outputs/benchmarks/te_qpinn_memory_alpha07_beta03_5seed/seed_1/classical_memory_pi/checkpoints
+  results_dir: outputs/benchmarks/te_qpinn_memory_alpha07_beta03_5seed/seed_1/classical_memory_pi/artifacts
+device: cuda
+seed: 1
