@@ -1,0 +1,40 @@
+{
+  "classical": {
+    "num_runs": 1,
+    "avg_runtime_sec": 90.96168130310252,
+    "std_runtime_sec": 0.0,
+    "avg_estimated_runtime_sec": 518.4000000000001,
+    "avg_cpu_rss_delta_mb": 706.68359375,
+    "std_cpu_rss_delta_mb": 0.0,
+    "avg_peak_gpu_memory_mb": 37.255859375,
+    "std_peak_gpu_memory_mb": 0.0,
+    "avg_final_loss": 3347.7867817121755,
+    "std_final_loss": 0.0,
+    "avg_final_l2": 1.1721005560096776,
+    "std_final_l2": 0.0,
+    "avg_final_linf": 1.34871421662947,
+    "std_final_linf": 0.0,
+    "avg_best_l2": 0.9999037185194375,
+    "avg_best_linf": 1.0565067750645336,
+    "avg_final_epoch": 20.0
+  },
+  "quantum_ready": {
+    "num_runs": 1,
+    "avg_runtime_sec": 72.29188829800114,
+    "std_runtime_sec": 0.0,
+    "avg_estimated_runtime_sec": 611.712,
+    "avg_cpu_rss_delta_mb": 13.4765625,
+    "std_cpu_rss_delta_mb": 0.0,
+    "avg_peak_gpu_memory_mb": 26.66015625,
+    "std_peak_gpu_memory_mb": 0.0,
+    "avg_final_loss": 3354.6693663777223,
+    "std_final_loss": 0.0,
+    "avg_final_l2": 1.0281121158627422,
+    "std_final_l2": 0.0,
+    "avg_final_linf": 1.3139893197060708,
+    "std_final_linf": 0.0,
+    "avg_best_l2": 1.0249865022136153,
+    "avg_best_linf": 1.3066290316182756,
+    "avg_final_epoch": 20.0
+  }
+}

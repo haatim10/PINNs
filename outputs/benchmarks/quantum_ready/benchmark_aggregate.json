@@ -1,0 +1,20 @@
+{
+  "classical": {
+    "num_runs": 2,
+    "avg_runtime_sec": 3.740600271965377,
+    "avg_cpu_rss_delta_mb": 356.263671875,
+    "avg_peak_gpu_memory_mb": 22.57958984375,
+    "avg_final_loss": 45.96737871993904,
+    "avg_final_l2": 1.003823040564055,
+    "avg_final_linf": 1.1122287251904088
+  },
+  "quantum_ready": {
+    "num_runs": 2,
+    "avg_runtime_sec": 5.213520531426184,
+    "avg_cpu_rss_delta_mb": 1.03125,
+    "avg_peak_gpu_memory_mb": 21.52880859375,
+    "avg_final_loss": 96.61091981563203,
+    "avg_final_l2": 1.9129534899470995,
+    "avg_final_linf": 1.743487784818626
+  }
+}

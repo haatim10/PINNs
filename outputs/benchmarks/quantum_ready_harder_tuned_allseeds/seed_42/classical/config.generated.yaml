@@ -1,0 +1,68 @@
+problem:
+  type: integro_differential
+  alpha: 0.5
+  beta: 0.5
+  x_min: 0.0
+  x_max: 1.0
+  t_max: 1.0
+  mesh_grading: 2.0
+  solution:
+    family: cosine
+    spatial_frequency: 3.0
+    time_power: 0.35
+    amplitude: 1.0
+    phase: 0.0
+discretization:
+  N_x: 100
+  N_t: 100
+  N_collocation: 90
+  N_boundary: 24
+  N_initial: 24
+  N_integral_quad: 12
+network:
+  model_type: classical
+  input_dim: 2
+  output_dim: 1
+  hidden_layers:
+  - 64
+  - 64
+  - 64
+  - 64
+  activation: mexican_hat
+  quantum:
+    backend: classical_emulator
+    n_qubits: 6
+    n_layers: 2
+    feature_scale: 0.7
+    entanglement_strength: 0.08
+    residual_connection: true
+training:
+  epochs: 20
+  learning_rate: 0.0005
+  scheduler:
+    enabled: false
+    type: cosine_warmup
+    warmup_epochs: 1
+    min_lr: 1.0e-05
+  lbfgs:
+    enabled: false
+    epochs: 0
+    lr: 1.0
+    max_iter: 20
+    history_size: 50
+  weights:
+    pde: 1.0
+    bc: 20.0
+    ic: 20.0
+logging:
+  eval_interval: 1
+  checkpoint_interval: 1000
+  track_points: false
+  points_file: outputs/benchmarks/unused_points.csv
+  track_l1_points: false
+  l1_points_file: outputs/benchmarks/unused_l1_points.csv
+paths:
+  checkpoint_dir: outputs/benchmarks/quantum_ready_harder_tuned_allseeds/seed_42/classical/checkpoints
+  results_dir: outputs/benchmarks/quantum_ready_harder_tuned_allseeds/seed_42/classical/artifacts
+device: cuda
+seed: 42

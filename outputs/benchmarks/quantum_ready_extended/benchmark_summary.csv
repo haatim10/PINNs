@@ -1,0 +1,11 @@
+seed,model_type,variant,epochs,runtime_sec,cpu_rss_delta_mb,peak_gpu_memory_mb,final_loss,final_l2,final_linf,run_dir
+42,classical,integro_diff_pinn,40,29.115439633838832,735.36328125,22.57958984375,59.54896887126889,0.8801380744774601,1.0241026194396277,outputs/benchmarks/quantum_ready_extended/seed_42/classical
+42,quantum_ready,quantum_ready_pinn,40,25.419024982023984,1.96484375,21.52880859375,248.38052623747893,1.7681123704748876,1.5808119723885055,outputs/benchmarks/quantum_ready_extended/seed_42/quantum_ready
+123,classical,integro_diff_pinn,40,13.190157226053998,0.02734375,22.57958984375,31.56651453847604,0.6878020158899747,0.9129639674213749,outputs/benchmarks/quantum_ready_extended/seed_123/classical
+123,quantum_ready,quantum_ready_pinn,40,24.42326162592508,0.30078125,21.52880859375,46.39626321219121,1.0242143825135364,0.9995439344374253,outputs/benchmarks/quantum_ready_extended/seed_123/quantum_ready
+999,classical,integro_diff_pinn,40,13.142549510113895,0.015625,22.57958984375,62.51453869614408,0.7521277749527189,0.89698949416661,outputs/benchmarks/quantum_ready_extended/seed_999/classical
+999,quantum_ready,quantum_ready_pinn,40,24.639618253102526,0.0078125,21.52880859375,194.6355594031656,3.592016852560869,3.1212962167540796,outputs/benchmarks/quantum_ready_extended/seed_999/quantum_ready
+2026,classical,integro_diff_pinn,40,13.99114915006794,0.01171875,22.57958984375,34.56962819141194,0.7024314390502164,0.824998068341922,outputs/benchmarks/quantum_ready_extended/seed_2026/classical
+2026,quantum_ready,quantum_ready_pinn,40,25.974737860029563,0.01953125,21.52880859375,49.22410424268428,1.0250504755005618,1.1042861645927833,outputs/benchmarks/quantum_ready_extended/seed_2026/quantum_ready
+7,classical,integro_diff_pinn,40,13.444844285026193,0.0078125,22.57958984375,46.08595014912587,0.6326579328864562,0.8098726276767405,outputs/benchmarks/quantum_ready_extended/seed_7/classical
+7,quantum_ready,quantum_ready_pinn,40,25.005646388977766,0.01953125,21.52880859375,67.12204022420029,1.0735815918126748,1.1817046364428627,outputs/benchmarks/quantum_ready_extended/seed_7/quantum_ready

@@ -1,0 +1,40 @@
+{
+  "seed": 42,
+  "model_type": "quantum_ready",
+  "variant": "quantum-ready PINN",
+  "runtime_sec": 2.0054991638753563,
+  "estimated_runtime_sec": 1.0,
+  "cpu_rss_delta_mb": 1.75,
+  "peak_gpu_memory_mb": 21.55419921875,
+  "epochs": 2,
+  "final_epoch": 2,
+  "final_loss": 339.19059234385526,
+  "final_l2": 2.509412350172928,
+  "final_linf": 2.1211736766557676,
+  "best_loss": 147.50455996450637,
+  "best_loss_epoch": 1,
+  "best_l2": 2.509412350172928,
+  "best_l2_epoch": 2,
+  "best_linf": 2.1211736766557676,
+  "best_linf_epoch": 2,
+  "history": {
+    "loss": [
+      147.50455996450637,
+      339.19059234385526
+    ],
+    "l2": [
+      2.5271497397691007,
+      2.509412350172928
+    ],
+    "linf": [
+      2.132905578686639,
+      2.1211736766557676
+    ],
+    "epochs": [
+      1,
+      2
+    ]
+  },
+  "run_dir": "outputs/benchmarks/quantum_ready_smoke/seed_42/quantum_ready",
+  "config_path": "outputs/benchmarks/quantum_ready_smoke/seed_42/quantum_ready/config.generated.yaml"
+}

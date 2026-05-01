@@ -1,0 +1,22 @@
+{
+  "config": "configs/benchmark_quantum_ready.yaml",
+  "device": "cuda",
+  "epochs": 2,
+  "total_estimated_runtime_sec": 17.439999999999998,
+  "planned_runs": [
+    {
+      "seed": 42,
+      "model_type": "classical",
+      "variant": "classical PINN",
+      "epochs": 2,
+      "estimated_runtime_sec": 8.0
+    },
+    {
+      "seed": 42,
+      "model_type": "quantum_ready",
+      "variant": "quantum-ready PINN",
+      "epochs": 2,
+      "estimated_runtime_sec": 9.44
+    }
+  ]
+}

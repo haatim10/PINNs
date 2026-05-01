@@ -1,0 +1,5 @@
+seed,model_type,variant,epochs,runtime_sec,cpu_rss_delta_mb,peak_gpu_memory_mb,final_loss,final_l2,final_linf,run_dir
+42,classical,integro_diff_pinn,8,4.663201326970011,712.36328125,22.57958984375,38.372435305798845,1.0737995998249465,1.2653620422130212,outputs/benchmarks/quantum_ready/seed_42/classical
+42,quantum_ready,quantum_ready_pinn,8,5.1482758668717,1.89453125,21.52880859375,118.55010700575582,2.4019391734012827,2.048977603187041,outputs/benchmarks/quantum_ready/seed_42/quantum_ready
+123,classical,integro_diff_pinn,8,2.817999216960743,0.1640625,22.57958984375,53.56232213407924,0.9338464813031634,0.9590954081677965,outputs/benchmarks/quantum_ready/seed_123/classical
+123,quantum_ready,quantum_ready_pinn,8,5.278765195980668,0.16796875,21.52880859375,74.67173262550823,1.4239678064929162,1.437997966450211,outputs/benchmarks/quantum_ready/seed_123/quantum_ready

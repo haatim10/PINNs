@@ -1,0 +1,336 @@
+\documentclass[conference]{IEEEtran}
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{siunitx}
+\usepackage{subcaption}
+\usepackage{url}
+\usepackage{hyperref}
+
+\title{Benchmarking Classical, Quantum-Inspired, and Memory-Aware PINNs\\
+for Time-Fractional Integro-Differential Systems with Sparse CSI Forecasting Extensions}
+
+\author{
+\IEEEauthorblockN{Author Name(s) Placeholder}
+\IEEEauthorblockA{
+Department / Lab Placeholder\\
+Institution Placeholder\\
+City, Country\\
+email@placeholder.edu
+}
+}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+% TODO: Replace with final polished abstract (150--220 words).
+% Keep it publication-style: problem, method families, protocol, key outcomes, and limits.
+% Recommended claim boundaries are listed in docs/final_report_inventory.md.
+This paper studies physics-informed neural networks (PINNs) for a time-fractional integro-differential equation with weakly singular memory terms, and benchmarks classical PINNs against quantum-inspired TE-QPINN surrogate variants under fairness-controlled protocols. We evaluate architecture stabilization strategies, memory-aware analytic feature extensions, multi-seed confirmatory performance, paired statistical significance, and alpha/beta robustness. We also include an optional exact PennyLane TE-QPINN feasibility check and application-inspired sparse CSI forecasting demonstrations in scalar and two-channel settings. % TODO: Insert final quantitative highlights from Table~\ref{tab:confirmatory10} and Table~\ref{tab:stats10}.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Physics-informed neural networks, fractional integro-differential equations, Caputo derivative, product integration, quantum-inspired neural networks, TE-QPINN, memory-aware features, sparse CSI forecasting.
+\end{IEEEkeywords}
+
+\section{Introduction}
+% TODO: Finalize motivation and novelty framing using contribution list from final_report_inventory.md.
+Fractional and memory-dependent differential systems remain challenging for neural PDE solvers due to nonlocal operators and optimization stiffness. This work extends a baseline fractional PINN pipeline with TE-QPINN-inspired surrogate models, stabilization and ablation studies, memory-aware feature engineering, and a fairness-controlled multi-seed evaluation protocol.
+Foundational context draws from PINNs \cite{PINNs}, fractional calculus and Caputo operators \cite{FracCalc}, L1-style discretization \cite{L1Scheme}, and product-integration treatment of weakly singular memory terms \cite{ProductIntegration,FracPINN}. The quantum-inspired track is motivated by hybrid QNN/QPINN directions \cite{QNN,QPINN,TEQPINN}.
+
+\subsection*{Main Contributions}
+\begin{itemize}
+    \item Reproducible benchmark framework for a time-fractional integro-differential PINN problem.
+    \item TE-QPINN-inspired surrogate implementation with modular configuration support.
+    \item LayerNorm/residual/gated/ablation experiments under locked protocols.
+    \item Memory-aware analytic feature extension with classical-memory fairness control.
+    \item 10-seed confirmatory analysis with paired statistical tests.
+    \item Alpha/beta robustness validation.
+    \item Exact PennyLane TE-QPINN feasibility study (differentiability + bottleneck analysis).
+    \item Application-inspired sparse CSI forecasting demos (scalar and two-channel).
+\end{itemize}
+
+\section{Fractional Integro-Differential Problem Formulation}
+We consider the baseline problem
+\begin{equation}
+    D_t^\alpha u(x,t) - (x^2+1)u_{xx}(x,t) +
+    \int_0^t \sin(x)(t-s)^{-\beta}u(x,s)\,ds = f(x,t),
+\end{equation}
+with $x\in[0,1],\, t\in(0,1]$, boundary conditions
+\begin{equation}
+u(0,t)=t^\alpha,\quad u(1,t)=-t^\alpha,
+\end{equation}
+and initial condition
+\begin{equation}
+u(x,0)=0.
+\end{equation}
+% TODO: Add exact manufactured solution and forcing-term details as finalized in the baseline implementation.
+
+\section{Baseline PINN and Numerical Residual Construction}
+% TODO: Connect directly to MidSem methodology.
+This section should summarize the classical PINN baseline and the residual construction that combines:
+\begin{itemize}
+    \item Caputo derivative approximation context (L1-style formulation),
+    \item graded temporal mesh motivation,
+    \item weakly singular Volterra integral handling,
+    \item product-integration residual implementation,
+    \item IC/BC and PDE residual loss composition.
+\end{itemize}
+% TODO: Insert concise equations and implementation-level choices used in scripts/train_integro_diff.py and src/physics*.py.
+% TODO: Add in-text references to baseline fractional PINN formulations \cite{FracPINN}.
+
+\section{TE-QPINN-Inspired and Exact PQC Model Variants}
+\subsection{TE-QPINN-Inspired Surrogate Family}
+% TODO: Summarize embedding, angle-style features, entanglement-inspired mixing, and residual branch options.
+
+\subsection{Exact PennyLane TE-QPINN Variant}
+An optional exact simulator-based PQC model is implemented using PennyLane. It is included as a feasibility track, not as the main performance track.
+% TODO: Cite feasibility details and bottlenecks from docs/te_qpinn_exact_pqc_notes.md.
+% TODO: Insert citations to QNN/QPINN/TE-QPINN references \cite{QNN,QPINN,TEQPINN}.
+
+\section{Memory-Aware Analytic Feature Design}
+The memory-aware feature set augments local coordinates with fractional-structure-inspired terms:
+\begin{equation}
+\phi_{\text{mem}}(x,t)=\left[x,t,t^\alpha,t^{1-\alpha},t^{1-\beta},\log(1+t),xt,xt^\alpha\right].
+\end{equation}
+% TODO: Clarify deterministic scaling and epsilon safety around t=0.
+
+\section{Experimental Protocol}
+% TODO: Replace placeholders with final concise protocol text.
+\subsection{Fairness Controls}
+\begin{itemize}
+    \item Same collocation/sampling protocol per comparison set.
+    \item Same optimizer budget for ``fair'' comparisons (Adam-only).
+    \item Separate labeling for extended-budget runs (Adam+LBFGS).
+    \item Parameter count and runtime reported for all variants.
+\end{itemize}
+
+\subsection{Evaluation Tracks}
+\begin{itemize}
+    \item Core benchmark: 50x50 fractional PDE setup.
+    \item 5-seed and 10-seed confirmatory evaluations.
+    \item Alpha/beta robustness slice.
+    \item Optional exact-PQC tiny feasibility benchmark.
+    \item Application-inspired sparse CSI demos.
+\end{itemize}
+
+\section{Benchmark and Ablation Results}
+
+\subsection{Adam-Only Confirmatory Performance}
+% TODO: Insert interpreted narrative tied to Table \ref{tab:confirmatory10}.
+\begin{table*}[t]
+\centering
+\caption{Adam-only 10-seed confirmatory results (primary endpoint: mean final L2).}
+\label{tab:confirmatory10}
+\begin{tabular}{lccccc}
+\toprule
+Variant & Final L2 (mean$\pm$std) & Final Linf (mean$\pm$std) & Final Loss (mean$\pm$std) & Runtime (s, mean$\pm$std) & Params \\
+\midrule
+Classical + PI & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
+Classical + PI + analytic memory & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
+TE fixed residual 0.10 + PI & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
+TE LayerNorm post\_quantum + PI & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
+TE memory-aware analytic + PI & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
+\bottomrule
+\end{tabular}
+\\
+\vspace{0.5em}
+\footnotesize Source: \texttt{outputs/benchmarks/te\_qpinn\_memory\_confirmatory\_10seed/multiseed\_stats.md}
+\end{table*}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/fig_confirmatory10_summary.png}
+\caption{Ten-seed confirmatory summary across classical, TE, and memory-aware variants.}
+\label{fig:confirmatory10}
+\end{figure*}
+
+\subsection{Statistical Testing}
+\begin{table*}[t]
+\centering
+\caption{Paired statistical tests for final L2 on 10-seed confirmatory runs.}
+\label{tab:stats10}
+\begin{tabular}{lccccccc}
+\toprule
+Comparison & Mean diff (A-B) & Median diff (A-B) & Wilcoxon p (two-sided) & Wilcoxon p (A$<$B) & Bootstrap 95\% CI & Paired d & Wins A \\
+\midrule
+Classical+memory vs Classical & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
+TE memory vs TE LayerNorm & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
+TE memory vs TE fixed & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
+TE memory vs Classical+memory & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
+\bottomrule
+\end{tabular}
+\\
+\vspace{0.5em}
+\footnotesize Source: \texttt{outputs/benchmarks/te\_qpinn\_memory\_confirmatory\_10seed/statistical\_tests.md}
+\end{table*}
+
+\subsection{Ablation and Stabilization}
+\begin{table*}[t]
+\centering
+\caption{Seed-42 ablation diagnostics for TE-QPINN surrogate variants.}
+\label{tab:ablation}
+\begin{tabular}{lccccc}
+\toprule
+Variant & Final L2 & Final Linf & Final Loss & Runtime (s) & Params \\
+\midrule
+Classical + PI & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
+Full TE-QPINN + PI & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
+TE residual scale 0.20 + PI & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
+TE no residual + PI & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
+\bottomrule
+\end{tabular}
+\\
+\vspace{0.5em}
+\footnotesize Source: \texttt{outputs/benchmarks/te\_qpinn\_ablation/ablation\_stats.md}
+\end{table*}
+
+\subsection{Alpha/Beta Robustness}
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/fig_alpha07_beta03_summary.png}
+\caption{Robustness summary at altered fractional setting ($\alpha=0.7,\beta=0.3$).}
+\label{fig:alpha_beta}
+\end{figure*}
+
+\begin{table*}[t]
+\centering
+\caption{Five-seed robustness results at $\alpha=0.7,\beta=0.3$.}
+\label{tab:alpha_beta}
+\begin{tabular}{lccccc}
+\toprule
+Variant & Final L2 (mean$\pm$std) & Final Linf (mean$\pm$std) & Final Loss (mean$\pm$std) & Runtime (s, mean$\pm$std) & Params \\
+\midrule
+Classical + PI & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
+Classical + PI + analytic memory & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
+TE fixed residual 0.10 + PI & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
+TE LayerNorm post\_quantum + PI & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
+TE memory-aware analytic + PI & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} & \texttt{TODO} \\
+\bottomrule
+\end{tabular}
+\\
+\vspace{0.5em}
+\footnotesize Source: \texttt{outputs/benchmarks/te\_qpinn\_memory\_alpha07\_beta03\_5seed/multiseed\_stats.md}
+\end{table*}
+
+\section{Exact PennyLane TE-QPINN Feasibility Study}
+% TODO: Keep this section short and explicit: feasibility/bottleneck, not performance claim.
+\begin{table}[t]
+\centering
+\caption{Exact PennyLane TE-QPINN tiny-smoke feasibility comparison.}
+\label{tab:exact_pqc}
+\begin{tabular}{lcc}
+\toprule
+Variant & Final L2 & Runtime (s) \\
+\midrule
+Classical + PI (tiny) & \texttt{TODO} & \texttt{TODO} \\
+Exact TE-QPINN PennyLane + PI (tiny) & \texttt{TODO} & \texttt{TODO} \\
+\bottomrule
+\end{tabular}
+\\
+\vspace{0.5em}
+\footnotesize Source: \texttt{outputs/benchmarks/te\_qpinn\_exact\_pqc\_smoke/benchmark\_report.md}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_exact_pqc_smoke_summary.png}
+\caption{Exact-PQC tiny-smoke summary (feasibility and runtime bottleneck).}
+\label{fig:exact_pqc}
+\end{figure}
+
+\section{Application Case Study: Sparse CSI Forecasting}
+The application extension is intentionally synthetic and application-inspired, motivated by sparse CSI forecasting contexts in wireless/MIMO/LEO settings \cite{CSI,MIMO,LEO}.
+
+\subsection{Scalar Synthetic CSI Forecasting}
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/fig_sparse_csi_showcase.png}
+\caption{Scalar sparse CSI forecasting showcase with forecast split and model overlays.}
+\label{fig:csi_scalar_showcase}
+\end{figure*}
+
+\begin{table}[t]
+\centering
+\caption{Scalar sparse CSI best-model summary.}
+\label{tab:csi_scalar}
+\begin{tabular}{lcc}
+\toprule
+Mode & Best Model & Mean Relative L2 \\
+\midrule
+Interpolation & \texttt{TODO} & \texttt{TODO} \\
+Forecast & \texttt{TODO} & \texttt{TODO} \\
+\bottomrule
+\end{tabular}
+\\
+\vspace{0.5em}
+\footnotesize Source: \texttt{outputs/applications/wireless\_channel\_demo/application\_summary\_table.csv}
+\end{table}
+
+\subsection{Two-Channel / MIMO-Style Extension}
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.47\textwidth]{figures/fig_mimo_interp_predictions.png}
+\hfill
+\includegraphics[width=0.47\textwidth]{figures/fig_mimo_forecast_predictions.png}
+\caption{Two-channel synthetic sparse CSI prediction: interpolation (left) and forecast (right).}
+\label{fig:csi_mimo_preds}
+\end{figure*}
+
+\begin{table}[t]
+\centering
+\caption{Two-channel sparse CSI best-model summary (aggregate metrics).}
+\label{tab:csi_mimo}
+\begin{tabular}{lcc}
+\toprule
+Mode & Best Model & Relative L2 \\
+\midrule
+Interpolation & \texttt{TODO} & \texttt{TODO} \\
+Forecast & \texttt{TODO} & \texttt{TODO} \\
+\bottomrule
+\end{tabular}
+\\
+\vspace{0.5em}
+\footnotesize Source: \texttt{outputs/applications/wireless\_channel\_demo/mimo\_application\_report.md}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_scalar_error_time.png}
+\caption{Scalar absolute-error trajectories over interpolation and forecast windows.}
+\label{fig:csi_scalar_error}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_scalar_robustness_sweep.png}
+\caption{Scalar application robustness sweep across noise/sparsity settings.}
+\label{fig:csi_robustness}
+\end{figure}
+
+\section{Discussion}
+% TODO: Finalize claim-safe discussion.
+% Suggested points:
+% - Classical+memory strongest in confirmatory Adam-only regime.
+% - TE-memory improves over non-memory TE in base setting but not over classical+memory.
+% - Robustness at alpha/beta slice limits TE-memory generalization.
+% - Exact PQC feasible but currently impractical.
+
+\section{Limitations and Future Work}
+% TODO: Keep explicit non-claims and future path.
+Key current limitations include synthetic application scope, exact-PQC runtime bottlenecks, and the need for broader robustness slices and additional statistical power.
+
+\section{Conclusion}
+% TODO: Insert concise final conclusion after prose is finalized.
+
+\section*{Acknowledgment}
+% TODO: Add acknowledgments/funding/support if applicable.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

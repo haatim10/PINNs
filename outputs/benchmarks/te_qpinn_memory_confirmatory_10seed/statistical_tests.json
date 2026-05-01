@@ -1,0 +1,163 @@
+{
+  "summary_csv": "outputs/benchmarks/te_qpinn_memory_confirmatory_10seed/summary.csv",
+  "primary_endpoint": "mean final L2 under Adam-only 10-seed validation",
+  "metric": "final_l2",
+  "comparisons": [
+    {
+      "id": 1,
+      "label": "Classical + memory vs Classical",
+      "run_a": "classical_memory_pi",
+      "run_b": "classical_pi",
+      "n_pairs": 10,
+      "seed_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        42,
+        123,
+        999,
+        2024,
+        2025
+      ],
+      "paired_mean_diff_a_minus_b": -0.1699195979223554,
+      "paired_median_diff_a_minus_b": -0.18373002197559313,
+      "wilcoxon": {
+        "statistic": 7.0,
+        "pvalue_two_sided": 0.037109375,
+        "pvalue_less_a_better": 0.0185546875
+      },
+      "bootstrap_95ci_mean_diff_a_minus_b": {
+        "ci_low": -0.29277141022931724,
+        "ci_high": -0.049635580925450506
+      },
+      "effect_size": {
+        "paired_cohens_d": -0.8320595583920034,
+        "cliffs_delta_independent_definition": -0.64
+      },
+      "win_counts": {
+        "wins_a": 9,
+        "ties": 0,
+        "losses_a": 1
+      }
+    },
+    {
+      "id": 2,
+      "label": "TE memory analytic vs TE LayerNorm non-memory",
+      "run_a": "te_memory_analytic_pi",
+      "run_b": "te_layernorm_post_quantum_pi",
+      "n_pairs": 10,
+      "seed_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        42,
+        123,
+        999,
+        2024,
+        2025
+      ],
+      "paired_mean_diff_a_minus_b": -0.1086982852992689,
+      "paired_median_diff_a_minus_b": -0.08981073591942368,
+      "wilcoxon": {
+        "statistic": 13.0,
+        "pvalue_two_sided": 0.16015625,
+        "pvalue_less_a_better": 0.080078125
+      },
+      "bootstrap_95ci_mean_diff_a_minus_b": {
+        "ci_low": -0.22728161917201736,
+        "ci_high": 0.004445019407938204
+      },
+      "effect_size": {
+        "paired_cohens_d": -0.5493017964596704,
+        "cliffs_delta_independent_definition": -0.34
+      },
+      "win_counts": {
+        "wins_a": 6,
+        "ties": 0,
+        "losses_a": 4
+      }
+    },
+    {
+      "id": 3,
+      "label": "TE memory analytic vs TE fixed",
+      "run_a": "te_memory_analytic_pi",
+      "run_b": "te_fixed_pi",
+      "n_pairs": 10,
+      "seed_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        42,
+        123,
+        999,
+        2024,
+        2025
+      ],
+      "paired_mean_diff_a_minus_b": -0.14602403585290313,
+      "paired_median_diff_a_minus_b": -0.13639950216908725,
+      "wilcoxon": {
+        "statistic": 12.0,
+        "pvalue_two_sided": 0.130859375,
+        "pvalue_less_a_better": 0.0654296875
+      },
+      "bootstrap_95ci_mean_diff_a_minus_b": {
+        "ci_low": -0.26654271151861353,
+        "ci_high": -0.030560932942016845
+      },
+      "effect_size": {
+        "paired_cohens_d": -0.7181016267606241,
+        "cliffs_delta_independent_definition": -0.48
+      },
+      "win_counts": {
+        "wins_a": 6,
+        "ties": 0,
+        "losses_a": 4
+      }
+    },
+    {
+      "id": 4,
+      "label": "TE memory analytic vs Classical + memory",
+      "run_a": "te_memory_analytic_pi",
+      "run_b": "classical_memory_pi",
+      "n_pairs": 10,
+      "seed_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        42,
+        123,
+        999,
+        2024,
+        2025
+      ],
+      "paired_mean_diff_a_minus_b": 0.056595187504559094,
+      "paired_median_diff_a_minus_b": 0.11684361821771888,
+      "wilcoxon": {
+        "statistic": 23.0,
+        "pvalue_two_sided": 0.6953125,
+        "pvalue_less_a_better": 0.6875
+      },
+      "bootstrap_95ci_mean_diff_a_minus_b": {
+        "ci_low": -0.09248249039561571,
+        "ci_high": 0.1958660395231297
+      },
+      "effect_size": {
+        "paired_cohens_d": 0.23012973030469594,
+        "cliffs_delta_independent_definition": 0.12
+      },
+      "win_counts": {
+        "wins_a": 3,
+        "ties": 0,
+        "losses_a": 7
+      }
+    }
+  ]
+}

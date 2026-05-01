@@ -1,0 +1,56 @@
+{
+  "run_name": "te_qpinn_exact_pennylane_pi_tiny",
+  "label": "Exact TE-QPINN PennyLane + PI (tiny)",
+  "seed": 42,
+  "model_type": "te_qpinn_pennylane",
+  "epochs": 2,
+  "final_epoch": 2,
+  "runtime_sec": 1348.6110522791278,
+  "cpu_rss_delta_mb": 400.10546875,
+  "peak_gpu_memory_mb": null,
+  "parameter_count": 251,
+  "final_loss": 206.3259156052365,
+  "final_l2": 3.918994679281668,
+  "final_linf": 2.7182040343839637,
+  "best_loss": 206.3259156052365,
+  "best_loss_epoch": 2,
+  "best_l2": 3.918994679281668,
+  "best_l2_epoch": 2,
+  "best_linf": 2.7182040343839637,
+  "best_linf_epoch": 2,
+  "config_source": "/root/projects/PINNs/configs/benchmark_te_qpinn_smoke_exact_pqc_pi.yaml",
+  "config_path": "outputs/benchmarks/te_qpinn_exact_pqc_smoke/seed_42/te_qpinn_exact_pennylane_pi_tiny/config.generated.yaml",
+  "history": {
+    "loss": [
+      311.4383206265357,
+      206.3259156052365
+    ],
+    "l2": [
+      3.931260262313095,
+      3.918994679281668
+    ],
+    "linf": [
+      2.7259549642653953,
+      2.7182040343839637
+    ],
+    "epochs": [
+      1,
+      2
+    ],
+    "lbfgs_loss": [],
+    "lbfgs_epochs": [],
+    "seed": 42,
+    "data_seed": 42,
+    "model_type": "te_qpinn_pennylane",
+    "parameter_count": 251,
+    "deterministic_sampling": true,
+    "fixed_collocation": false,
+    "final_loss": 206.3259156052365,
+    "final_l2": 3.918994679281668,
+    "final_linf": 2.7182040343839637,
+    "final_epoch": 2,
+    "lbfgs_enabled": false,
+    "lbfgs_epochs_ran": 0
+  },
+  "run_dir": "outputs/benchmarks/te_qpinn_exact_pqc_smoke/seed_42/te_qpinn_exact_pennylane_pi_tiny"
+}

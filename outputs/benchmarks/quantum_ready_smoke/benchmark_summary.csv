@@ -1,0 +1,3 @@
+seed,model_type,variant,epochs,final_epoch,runtime_sec,estimated_runtime_sec,cpu_rss_delta_mb,peak_gpu_memory_mb,final_loss,final_l2,final_linf,best_loss,best_loss_epoch,best_l2,best_l2_epoch,best_linf,best_linf_epoch,run_dir
+42,classical,classical PINN,2,2,10.019944454776123,1.0,742.34375,22.60498046875,51.80982026876087,1.2192242132473845,1.4613602703814923,51.688213540552674,1,1.2192242132473845,2,1.4613602703814923,2,outputs/benchmarks/quantum_ready_smoke/seed_42/classical
+42,quantum_ready,quantum-ready PINN,2,2,2.0054991638753563,1.0,1.75,21.55419921875,339.19059234385526,2.509412350172928,2.1211736766557676,147.50455996450637,1,2.509412350172928,2,2.1211736766557676,2,outputs/benchmarks/quantum_ready_smoke/seed_42/quantum_ready
