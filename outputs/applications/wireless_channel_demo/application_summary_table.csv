@@ -1,0 +1,3 @@
+mode,best_model,mean_relative_l2,mean_mse,mean_max_error,key_takeaway
+interpolation,MLP + memory + domain,0.104616,0.006813,0.225622,Combined memory+domain priors gave the most accurate sparse reconstruction.
+forecast,MLP + memory + domain,0.249553,0.037874,0.260614,Combined memory+domain priors gave the strongest future-window prediction.

@@ -197,6 +197,25 @@ See full robustness details and paired tests:
 - `docs/te_qpinn_benchmark_analysis.md`
 - `outputs/benchmarks/te_qpinn_memory_alpha07_beta03_5seed/statistical_tests.md`
 
+## Application Demo: Sparse CSI Forecasting for Time-Varying Wireless Channels
+
+As an application appendix, this branch includes synthetic sparse-CSI forecasting demos for both a scalar channel and a lightweight two-channel (MIMO-style) link. The comparison uses linear/AR baselines, MLP baseline, memory-style priors, Doppler/domain sinusoidal priors, and combined priors under a strict fairness lock.
+
+Run:
+
+```bash
+python scripts/run_wireless_channel_demo.py
+```
+
+Current scalar snapshot: best interpolation and forecast model is **MLP + memory + domain** (mean relative L2: `0.1108` interpolation, `0.2569` forecast). Full details:
+- [application_report.md](outputs/applications/wireless_channel_demo/application_report.md)
+- [mimo_application_report.md](outputs/applications/wireless_channel_demo/mimo_application_report.md)
+
+![Sparse CSI Forecast Showcase](outputs/applications/wireless_channel_demo/sparse_csi_forecast_showcase.png)
+
+Outputs: `outputs/applications/wireless_channel_demo/`  
+Limitation: synthetic proof-of-concept only; no deployment-level channel-performance claim.
+
 ## Key Figures
 
 Curated plots are collected in: `outputs/plots/key_results/`
