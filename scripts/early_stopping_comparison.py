@@ -39,7 +39,7 @@ def load_and_eval_model(checkpoint_path, config, device):
     checkpoint = torch.load(checkpoint_path, weights_only=False, map_location=device)
     
     net_cfg = config['network']
-    model = build_model(net_cfg, device=device)
+    model = build_model(net_cfg, device=device, problem_config=config.get('problem', {}))
     model.load_state_dict(checkpoint['model_state_dict'])
     model = model.to(device)
     

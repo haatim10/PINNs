@@ -2,6 +2,7 @@
 
 from typing import Dict, Optional
 
+from .exact_te_qpinn_pennylane import ExactTEQPINNPennyLane
 from .memory_features import MemoryFeatureBuilder
 from .model import PINN
 from .quantum_ready_model import QuantumReadyPINN
@@ -36,6 +37,9 @@ def build_model(network_config: Dict, device: str = "cpu", problem_config: Optio
     - hybrid_quantum (alias for quantum_ready)
     - te_qpinn_surrogate
     - te_qpinn (alias for te_qpinn_surrogate)
+    - te_qpinn_pennylane
+    - exact_te_qpinn_pennylane (alias for te_qpinn_pennylane)
+    - exact_pqc_te_qpinn (alias for te_qpinn_pennylane)
 
     Memory features are configured through network keys:
     - memory_features: none | analytic
@@ -84,9 +88,21 @@ def build_model(network_config: Dict, device: str = "cpu", problem_config: Optio
             memory_feature_builder=memory_builder if use_memory_builder else None,
         )
 
+    if model_type in {
+        "te_qpinn_pennylane",
+        "exact_te_qpinn_pennylane",
+        "exact_pqc_te_qpinn",
+    }:
+        return ExactTEQPINNPennyLane(
+            **common_kwargs,
+            te_qpinn_pennylane=network_config.get("te_qpinn_pennylane", {}),
+            problem=problem_config or {},
+        )
+
     raise ValueError(
         f"Unsupported model_type '{model_type}'. "
-        "Use one of: classical, quantum_ready, hybrid_quantum, te_qpinn_surrogate, te_qpinn."
+        "Use one of: classical, quantum_ready, hybrid_quantum, te_qpinn_surrogate, "
+        "te_qpinn, te_qpinn_pennylane, exact_te_qpinn_pennylane, exact_pqc_te_qpinn."
     )
 
 
@@ -100,4 +116,10 @@ def model_name_from_config(network_config: Dict) -> str:
         return "quantum_ready"
     if model_type in {"te_qpinn", "teqpinn", "te-qpinn"}:
         return "te_qpinn_surrogate"
+    if model_type in {
+        "te_qpinn_pennylane",
+        "exact_te_qpinn_pennylane",
+        "exact_pqc_te_qpinn",
+    }:
+        return "te_qpinn_pennylane"
     return model_type

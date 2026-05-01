@@ -172,7 +172,7 @@ def main():
     t_max = problem.get("t_max", 1.0)
 
     net_cfg = config.get("network", config.get("model", {}))
-    model = build_model(net_cfg, device=device)
+    model = build_model(net_cfg, device=device, problem_config=problem)
     print(f"Model type: {model_name_from_config(net_cfg)}")
 
     checkpoint = torch.load(args.checkpoint, map_location=device)

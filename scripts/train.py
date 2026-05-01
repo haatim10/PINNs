@@ -57,7 +57,7 @@ def main():
     l1_coeffs = L1Coefficients(mesh, alpha, device=device)
     
     net = config.get('network', {})
-    model = build_model(net, device=device)
+    model = build_model(net, device=device, problem_config=prob)
     print(f"Model parameters: {count_trainable_parameters(model)}")
     
     dataset = CollocationDataset(

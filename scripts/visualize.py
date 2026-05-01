@@ -71,7 +71,7 @@ def main():
     t_max = problem.get("t_max", 1.0)
 
     net_cfg = config.get("network", config.get("model", {}))
-    model = build_model(net_cfg, device=device)
+    model = build_model(net_cfg, device=device, problem_config=problem)
 
     checkpoint = torch.load(checkpoint_path, map_location=device)
     model.load_state_dict(checkpoint["model_state_dict"])

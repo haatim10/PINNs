@@ -34,6 +34,14 @@ Full raw outputs remain under `outputs/plots/` for complete reproducibility.
   Source: `outputs/plots/te_qpinn_memory_multiseed/error_heatmaps_seed_0_classical_vs_te_qpinn.png`  
   Representative side-by-side absolute-error heatmap comparison from the memory multi-seed run (seed 0 view).
 
+- `memory_confirmatory_10seed_summary.png`  
+  Source: `outputs/plots/te_qpinn_memory_confirmatory_10seed/summary_panels.png`  
+  Summarizes the locked Stage 2b ten-seed confirmatory comparison for Classical, Classical+memory, TE non-memory, and TE memory-aware variants.
+
+- `memory_confirmatory_10seed_error_heatmap.png`  
+  Source: `outputs/plots/te_qpinn_memory_confirmatory_10seed/error_heatmaps_seed_42_classical_vs_te_qpinn.png`  
+  Representative absolute-error side-by-side comparison from the 10-seed confirmatory run.
+
 - `best_te_vs_classical_error_heatmap.png`  
   Source: `outputs/plots/te_qpinn_memory_smoke/error_heatmaps_seed_42_classical_vs_te_qpinn.png`  
   Side-by-side absolute-error heatmaps for Classical + PI versus the best TE variant selected for that seed.
@@ -43,6 +51,7 @@ Full raw outputs remain under `outputs/plots/` for complete reproducibility.
 Memory-aware figures now include both:
 
 - **single-seed smoke** diagnostics (seed 42), and
-- **locked 5-seed validation** artifacts.
+- **locked 5-seed validation** artifacts,
+- **locked 10-seed confirmatory** artifacts.
 
-The smoke results remain preliminary by themselves; the five-seed summary should be used for stronger conclusions.
+The smoke results remain preliminary by themselves; the ten-seed confirmatory summary should be used for strongest conclusions.

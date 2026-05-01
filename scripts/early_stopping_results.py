@@ -274,7 +274,7 @@ def main():
     # Load model
     print(f"\nLoading model from epoch {checkpoint['epoch']}...")
     net_cfg = config['network']
-    model = build_model(net_cfg, device=device)
+    model = build_model(net_cfg, device=device, problem_config=config.get('problem', {}))
     model.load_state_dict(checkpoint['model_state_dict'])
     model = model.to(device)
     

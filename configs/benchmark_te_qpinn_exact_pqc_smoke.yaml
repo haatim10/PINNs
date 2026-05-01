@@ -1,0 +1,16 @@
+# Phase 9B Milestone A: exact PennyLane TE-QPINN smoke comparison
+
+seeds: [42]
+device: cpu
+output_dir: outputs/benchmarks/te_qpinn_exact_pqc_smoke
+plots_dir: outputs/plots/te_qpinn_exact_pqc_smoke
+report_name: benchmark_report.md
+field_eval_enabled: false
+
+runs:
+  - name: classical_pi_tiny
+    label: Classical + PI (tiny)
+    config: configs/benchmark_te_qpinn_smoke_classical_pi_tiny_exact.yaml
+  - name: te_qpinn_exact_pennylane_pi_tiny
+    label: Exact TE-QPINN PennyLane + PI (tiny)
+    config: configs/benchmark_te_qpinn_smoke_exact_pqc_pi.yaml

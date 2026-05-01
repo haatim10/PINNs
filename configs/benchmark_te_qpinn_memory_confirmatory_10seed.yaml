@@ -1,0 +1,24 @@
+# Phase 8E Stage 2b: locked 10-seed confirmatory validation for memory-aware TE-QPINN
+
+seeds: [0, 1, 2, 3, 4, 42, 123, 2024, 2025, 999]
+device: auto
+output_dir: outputs/benchmarks/te_qpinn_memory_confirmatory_10seed
+plots_dir: outputs/plots/te_qpinn_memory_confirmatory_10seed
+report_name: benchmark_report.md
+
+runs:
+  - name: classical_pi
+    label: Classical + PI
+    config: configs/benchmark_te_qpinn_50_classical_pi.yaml
+  - name: classical_memory_pi
+    label: Classical + PI + analytic memory
+    config: configs/benchmark_te_qpinn_50_classical_pi_memory_analytic.yaml
+  - name: te_fixed_pi
+    label: TE fixed residual 0.10 + PI (local-coordinate baseline)
+    config: configs/benchmark_te_qpinn_50_surrogate_pi.yaml
+  - name: te_layernorm_post_quantum_pi
+    label: TE LayerNorm post_quantum + PI
+    config: configs/benchmark_te_qpinn_50_surrogate_pi_layernorm_post_quantum.yaml
+  - name: te_memory_analytic_pi
+    label: TE memory-aware analytic + PI
+    config: configs/benchmark_te_qpinn_50_surrogate_pi_memory_analytic.yaml

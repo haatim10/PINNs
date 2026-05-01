@@ -113,6 +113,12 @@ def normalize_model_name(model_type: str) -> str:
         return "quantum_ready"
     if model_type in {"te_qpinn", "teqpinn", "te-qpinn"}:
         return "te_qpinn_surrogate"
+    if model_type in {
+        "te_qpinn_pennylane",
+        "exact_te_qpinn_pennylane",
+        "exact_pqc_te_qpinn",
+    }:
+        return "te_qpinn_pennylane"
     return model_type
 
 
@@ -1378,6 +1384,7 @@ def run_benchmark_case(
     output_dir: Path,
     plots_dir: Path,
     device_mode: str,
+    enable_field_eval: bool = True,
 ) -> Dict:
     base_config = load_yaml(config_source)
     config = copy.deepcopy(base_config)
@@ -1488,13 +1495,14 @@ def run_benchmark_case(
     }
 
     # Field-level evaluation plots for the configured PDE benchmark.
-    try:
-        field_data = evaluate_field_data(model=model, config=config, device=resolved_device)
-        if field_data is not None:
-            field_paths = save_field_plots_for_record(record, field_data, plots_dir)
-            record.update(field_paths)
-    except Exception as exc:
-        print(f"[warn] Field-level plotting skipped for run={run_name}, seed={seed}: {exc}")
+    if enable_field_eval:
+        try:
+            field_data = evaluate_field_data(model=model, config=config, device=resolved_device)
+            if field_data is not None:
+                field_paths = save_field_plots_for_record(record, field_data, plots_dir)
+                record.update(field_paths)
+        except Exception as exc:
+            print(f"[warn] Field-level plotting skipped for run={run_name}, seed={seed}: {exc}")
 
     with open(run_dir / "metrics.json", "w", encoding="utf-8") as handle:
         json.dump(record, handle, indent=2)
@@ -1525,6 +1533,7 @@ def main():
     plots_dir = Path(benchmark_cfg.get("plots_dir", "outputs/plots/te_qpinn"))
     report_name = str(benchmark_cfg.get("report_name", "benchmark_report.md"))
     device_mode = str(benchmark_cfg.get("device", "auto"))
+    field_eval_enabled = bool(benchmark_cfg.get("field_eval_enabled", True))
 
     output_dir.mkdir(parents=True, exist_ok=True)
     plots_dir.mkdir(parents=True, exist_ok=True)
@@ -1548,6 +1557,7 @@ def main():
     print(f"Seeds: {seeds}")
     print(f"Output dir: {output_dir}")
     print(f"Plots dir: {plots_dir}")
+    print(f"Field eval enabled: {field_eval_enabled}")
     if args.dry_run:
         print("\nPlanned runs:")
         for item in planned:
@@ -1583,6 +1593,7 @@ def main():
             output_dir=output_dir,
             plots_dir=plots_dir,
             device_mode=device_mode,
+            enable_field_eval=field_eval_enabled,
         )
         records.append(record)
         print(

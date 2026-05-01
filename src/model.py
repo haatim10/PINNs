@@ -2,7 +2,7 @@
 
 import torch
 import torch.nn as nn
-from typing import List
+from typing import List, Optional
 
 
 class MexicanHatWavelet(nn.Module):
@@ -32,7 +32,8 @@ class PINN(nn.Module):
         output_dim: int = 1,
         hidden_layers: List[int] = [64, 64, 64, 64],
         activation: str = "tanh",
-        device: str = "cpu"
+        device: str = "cpu",
+        memory_feature_builder: Optional[nn.Module] = None,
     ):
         super(PINN, self).__init__()
         
@@ -40,6 +41,7 @@ class PINN(nn.Module):
         self.output_dim = output_dim
         self.hidden_layers = hidden_layers
         self.device = device
+        self.memory_feature_builder = memory_feature_builder
         
         activations = {
             "tanh": nn.Tanh(),
@@ -73,11 +75,14 @@ class PINN(nn.Module):
                     nn.init.zeros_(m.bias)
                     
     def forward(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
-        if x.dim() == 1:
-            x = x.unsqueeze(-1)
-        if t.dim() == 1:
-            t = t.unsqueeze(-1)
-        inputs = torch.cat([x, t], dim=-1)
+        if self.memory_feature_builder is not None:
+            inputs = self.memory_feature_builder(x, t)
+        else:
+            if x.dim() == 1:
+                x = x.unsqueeze(-1)
+            if t.dim() == 1:
+                t = t.unsqueeze(-1)
+            inputs = torch.cat([x, t], dim=-1)
         return self.network(inputs)
     
     def count_parameters(self) -> int:
