@@ -45,6 +45,47 @@ Scope note:
 - This is **not** hardware-executable quantum computing.
 - This is a classical surrogate inspired by TE-QPINN design ideas.
 
+## Optional Exact PennyLane TE-QPINN (Phase 9B)
+
+This branch now also includes an optional **paper-aligned hybrid FNN + PQC** model:
+
+- `model_type: te_qpinn_pennylane`
+- aliases: `exact_te_qpinn_pennylane`, `exact_pqc_te_qpinn`
+
+Implemented components:
+
+- trainable embedding FNN
+- angle construction via `phi_i(x,t) * cycled_coordinate_i`
+- PennyLane circuit (`default.qubit`, `RX/RY/RZ` ansatz, CNOT chain/ring)
+- expectation-value readout (`z_sum` or `z_tensor`)
+
+Important scope:
+
+- this is simulator-based quantum-circuit execution (PennyLane), not hardware quantum execution
+- this is an optional model family; surrogate and classical pipelines remain unchanged
+- Milestone A is smoke-level verification only
+
+See:
+
+- `docs/te_qpinn_exact_pqc_notes.md`
+
+### Exact PennyLane TE-QPINN Status
+
+- This repo now includes an optional exact PennyLane TE-QPINN model that is closer to the paper architecture.
+- It uses a simulated parameterized quantum circuit (`default.qubit`), not quantum hardware.
+- Current tiny smoke results validate feasibility (integration + differentiability), not performance advantage.
+- In the current smoke setup, exact PQC is much slower and less accurate than the tiny classical baseline.
+- Larger exact-PQC benchmarks should wait until runtime bottlenecks are reduced.
+
+Recommended next steps for exact PQC track:
+
+- vectorize/batch QNode evaluation where possible
+- reduce derivative and field-evaluation cost
+- test fewer qubits/layers
+- test simplified residual path first
+- use exact PQC only for tiny diagnostics until runtime improves
+- keep memory-aware classical/surrogate results as the main practical benchmark track
+
 ## Classical Baseline (Secondary Reference)
 
 Classical PINN + PI remains the baseline for fair comparison:
@@ -116,6 +157,26 @@ Interpretation:
 - Classical + memory control is still stronger on mean L2/Linf, so TE-specific memory advantage is not yet proven.
 - This supports continuing memory-aware work, but with strict fairness controls and confirmatory multi-seed follow-up.
 
+### E) Memory-Aware TE-QPINN Ten-Seed Confirmatory (Adam-Only, Locked)
+
+Seeds: `[0, 1, 2, 3, 4, 42, 123, 2024, 2025, 999]`  
+Primary endpoint: **mean final L2**.
+
+| Variant | Final L2 (mean ± std) | Final Linf (mean ± std) | Final Loss (mean ± std) | Runtime (s, mean ± std) | Params |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Classical + PI | 0.922830 ± 0.076989 | 1.043477 ± 0.122118 | 44.012908 ± 12.667057 | 14.7715 ± 1.1693 | 2241 |
+| Classical + PI + analytic memory | 0.752910 ± 0.188977 | 0.810768 ± 0.217877 | 37.575163 ± 16.695402 | 17.7416 ± 1.6117 | 2433 |
+| TE fixed residual 0.10 + PI | 0.955529 ± 0.070070 | 1.052766 ± 0.092046 | 47.486260 ± 14.141845 | 42.4348 ± 2.8408 | 2306 |
+| TE LayerNorm post_quantum + PI | 0.918204 ± 0.076402 | 1.025404 ± 0.117049 | 41.205865 ± 10.416957 | 44.6977 ± 3.0572 | 2338 |
+| TE memory-aware analytic + PI | 0.809505 ± 0.176401 | 1.008622 ± 0.232580 | 26.643364 ± 13.316055 | 45.0615 ± 3.4201 | 2498 |
+
+Interpretation:
+
+- Memory-aware TE improves over non-memory TE baselines on mean L2 and mean loss.
+- Classical + analytic memory remains strongest on mean L2, mean Linf, and efficiency.
+- Current evidence supports **memory-feature usefulness** on this benchmark; TE-specific superiority is **not** established.
+- Full confirmatory details and statistical tests: `docs/te_qpinn_benchmark_analysis.md`.
+
 ## Key Figures
 
 Curated plots are collected in: `outputs/plots/key_results/`
@@ -123,6 +184,7 @@ Curated plots are collected in: `outputs/plots/key_results/`
 ![Optimizer Sensitivity Summary](outputs/plots/key_results/optimizer_sensitivity_summary.png)
 ![LayerNorm Multi-Seed Summary](outputs/plots/key_results/layernorm_multiseed_summary.png)
 ![Memory Multiseed Summary](outputs/plots/key_results/memory_multiseed_summary.png)
+![Memory Confirmatory 10-Seed Summary](outputs/plots/key_results/memory_confirmatory_10seed_summary.png)
 ![Best TE vs Classical Error Heatmap](outputs/plots/key_results/best_te_vs_classical_error_heatmap.png)
 
 ## Experiment Timeline (Completed Phases)
@@ -141,6 +203,7 @@ Curated plots are collected in: `outputs/plots/key_results/`
 - [x] optimizer sensitivity study completed
 - [x] memory-aware analytic smoke completed
 - [x] memory-aware analytic 5-seed validation completed
+- [x] memory-aware analytic 10-seed confirmatory completed
 
 ## How To Run
 
@@ -186,6 +249,18 @@ Memory-aware multi-seed (Phase 8D):
 python scripts/benchmark_te_qpinn.py --benchmark-config configs/benchmark_te_qpinn_memory_multiseed.yaml --resume-incomplete
 ```
 
+Memory-aware confirmatory 10-seed (Phase 8E):
+
+```bash
+python scripts/benchmark_te_qpinn.py --benchmark-config configs/benchmark_te_qpinn_memory_confirmatory_10seed.yaml --resume-incomplete
+```
+
+Exact PennyLane TE-QPINN smoke (Phase 9B Milestone A):
+
+```bash
+python scripts/benchmark_te_qpinn.py --benchmark-config configs/benchmark_te_qpinn_exact_pqc_smoke.yaml --resume-incomplete
+```
+
 ## Output / Artifact Index
 
 - `outputs/benchmarks/te_qpinn_multiseed/`
@@ -193,14 +268,17 @@ python scripts/benchmark_te_qpinn.py --benchmark-config configs/benchmark_te_qpi
 - `outputs/benchmarks/te_qpinn_optimizer_sensitivity/`
 - `outputs/benchmarks/te_qpinn_memory_smoke/`
 - `outputs/benchmarks/te_qpinn_memory_multiseed/`
+- `outputs/benchmarks/te_qpinn_memory_confirmatory_10seed/`
 - `outputs/plots/te_qpinn_multiseed/`
 - `outputs/plots/te_qpinn_layernorm_multiseed/`
 - `outputs/plots/te_qpinn_optimizer_sensitivity/`
 - `outputs/plots/te_qpinn_memory_smoke/`
 - `outputs/plots/te_qpinn_memory_multiseed/`
+- `outputs/plots/te_qpinn_memory_confirmatory_10seed/`
 - `outputs/plots/key_results/`
 - `docs/te_qpinn_benchmark_analysis.md`
 - `docs/te_qpinn_memory_aware_plan.md`
+- `docs/te_qpinn_exact_pqc_notes.md`
 
 ## Current Interpretation
 
@@ -214,9 +292,9 @@ python scripts/benchmark_te_qpinn.py --benchmark-config configs/benchmark_te_qpi
 
 ## Next Steps
 
-- Stage A: 10-seed Adam-only stability map
-- Stage B: targeted Adam+LBFGS runs on finalists
-- Stage C: equal-runtime and equal-epoch finalist study
+- Stage 3: targeted Adam+LBFGS runs on locked finalists
+- Stage 4: equal-runtime and equal-epoch finalist study
+- Stage 5: alpha/beta robustness slice with pre-locked secondary pair
 - statistical testing (paired tests + effect sizes)
 - bootstrap confidence intervals
 - time-to-quality curves

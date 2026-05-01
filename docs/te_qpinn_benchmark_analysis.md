@@ -371,3 +371,94 @@ Result: **Stage-2 gate PASS** (criteria a and c passed).
 4. TE memory + LayerNorm is unstable in this run (high variance, weaker means), so it should not be treated as a finalist without further stabilization.
 
 Bottom line: memory-aware analytic features are promising and worth continuing, but the current evidence supports a feature-engineering benefit more strongly than a unique TE-architecture benefit.
+
+## 17. Memory-Aware TE-QPINN Ten-Seed Confirmatory Validation (Phase 8E)
+
+A locked Stage 2b confirmatory run was completed with seeds:
+
+`[0, 1, 2, 3, 4, 42, 123, 2024, 2025, 999]`
+
+using `configs/benchmark_te_qpinn_memory_confirmatory_10seed.yaml` and `--resume-incomplete`.
+
+Compared variants:
+
+1. Classical + PI
+2. Classical + PI + analytic memory
+3. TE fixed residual 0.10 + PI
+4. TE LayerNorm post_quantum + PI
+5. TE memory-aware analytic + PI
+
+Primary endpoint: mean final L2 (Adam-only, 10 seeds).
+
+### Aggregate means/std (official benchmark summary)
+
+| Variant | Mean Final L2 | Std L2 | Mean Final Linf | Std Linf | Mean Final Loss | Std Loss | Mean Runtime (s) | Std Runtime (s) | Params |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Classical + PI | 0.922830 | 0.076989 | 1.043477 | 0.122118 | 44.012908 | 12.667057 | 14.7715 | 1.1693 | 2241 |
+| Classical + PI + analytic memory | 0.752910 | 0.188977 | 0.810768 | 0.217877 | 37.575163 | 16.695402 | 17.7416 | 1.6117 | 2433 |
+| TE fixed 0.10 + PI | 0.955529 | 0.070070 | 1.052766 | 0.092046 | 47.486260 | 14.141845 | 42.4348 | 2.8408 | 2306 |
+| TE LayerNorm post_quantum + PI | 0.918204 | 0.076402 | 1.025404 | 0.117049 | 41.205865 | 10.416957 | 44.6977 | 3.0572 | 2338 |
+| TE memory-aware analytic + PI | 0.809505 | 0.176401 | 1.008622 | 0.232580 | 26.643364 | 13.316055 | 45.0615 | 3.4201 | 2498 |
+
+### Extended per-variant metrics (median/best/worst + accuracy-per-runtime)
+
+Detailed tables are saved in:
+
+- `outputs/benchmarks/te_qpinn_memory_confirmatory_10seed/confirmatory_stats.md`
+- `outputs/benchmarks/te_qpinn_memory_confirmatory_10seed/confirmatory_stats.json`
+
+Key values:
+
+- Classical + PI: L2 median `0.901796`, best `0.782010`, worst `1.018611`, accuracy-per-runtime `13.6316`
+- Classical + memory: L2 median `0.745080`, best `0.454774`, worst `1.124376`, accuracy-per-runtime `13.3579`
+- TE fixed: L2 median `0.954154`, best `0.878501`, worst `1.104665`, accuracy-per-runtime `40.5477`
+- TE LayerNorm: L2 median `0.901254`, best `0.823901`, worst `1.076966`, accuracy-per-runtime `41.0416`
+- TE memory analytic: L2 median `0.803911`, best `0.577227`, worst `1.082807`, accuracy-per-runtime `36.4775`
+
+### Requested win counts
+
+- TE memory vs TE fixed: L2 wins `6/10`, Linf wins `4/10`
+- TE memory vs TE LayerNorm non-memory: L2 wins `6/10`, Linf wins `5/10`
+- TE memory vs Classical: L2 wins `7/10`, Linf wins `6/10`
+- TE memory vs Classical + memory: L2 wins `3/10`, Linf wins `2/10`
+- Classical + memory vs Classical: L2 wins `9/10`, Linf wins `9/10`
+
+### Statistical tests (paired, from confirmatory_stats)
+
+- Classical + memory vs Classical (L2):
+  - Wilcoxon `p(two-sided)=0.0371`, `p(a<b)=0.0186`
+  - Mean L2 diff (a-b) `-0.1699`, 95% bootstrap CI `[-0.2921, -0.0494]`
+  - Paired Cohen’s d `-0.8321`
+- TE memory vs TE LayerNorm non-memory (L2):
+  - Wilcoxon `p(two-sided)=0.1602`, `p(a<b)=0.0801`
+  - Mean L2 diff `-0.1087`, 95% bootstrap CI `[-0.2285, 0.0069]`
+- TE memory vs Classical + memory (L2):
+  - Wilcoxon `p(two-sided)=0.6953`, `p(a<b)=0.6875`
+  - Mean L2 diff `+0.0566`, 95% bootstrap CI `[-0.0928, 0.1931]`
+
+### Interpretation
+
+1. Memory-aware TE improves over non-memory TE baselines on mean L2 and mean loss in this 10-seed run.
+2. However, Classical + analytic memory remains stronger on mean L2, mean Linf, and efficiency; it also wins `9/10` on both L2 and Linf versus Classical baseline.
+3. This supports memory-feature usefulness for this benchmark, but does not establish TE-specific superiority.
+4. TE memory-aware Linf variance remains relatively high, so stability concerns are still present.
+5. No quantum-advantage claim is warranted; this remains a quantum-inspired surrogate study.
+
+## 18. Exact PennyLane TE-QPINN Feasibility Check
+
+An exact paper-aligned PennyLane TE-QPINN model was integrated as an optional model family and validated with a tiny smoke benchmark (`configs/benchmark_te_qpinn_exact_pqc_smoke.yaml`, seed `42`).
+
+### Tiny smoke results
+
+| Variant | Params | Runtime (s) | Final Loss | Final L2 | Final Linf |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Classical + PI (tiny) | 337 | 1.6793 | 23.8083 | 0.930595 | 0.968080 |
+| Exact TE-QPINN PennyLane + PI (tiny) | 251 | 1348.6111 | 206.3259 | 3.918995 | 2.718204 |
+
+### Interpretation
+
+1. The exact PQC path is differentiable and integrated (forward, autograd, and second derivatives were validated in tests).
+2. The current exact PQC path is computationally expensive, primarily due to sample-wise QNode execution and higher-order autograd cost under the fractional/product-integration residual.
+3. In this tiny smoke setup, exact PQC is much slower and less accurate than the classical tiny baseline.
+4. This is a feasibility/bottleneck result, not a performance-success result.
+5. Practical benchmark progress should continue on the memory-aware classical/surrogate tracks while exact PQC runtime bottlenecks are addressed.
