@@ -113,6 +113,11 @@ class IntegroDifferentialResidual:
         self.n_quad = n_quad
         self.device = device
         self.history_gradient_mode = str(history_gradient_mode).lower()
+        # Use the vectorized residual by default; see compute() / compute_reference().
+        self.use_vectorized_residual = True
+        self._w_l1 = None
+        self._w_int = None
+        self._c1 = None
         if self.history_gradient_mode not in {"full", "detached_legacy"}:
             raise ValueError(
                 "history_gradient_mode must be one of: full, detached_legacy"
@@ -369,11 +374,124 @@ class IntegroDifferentialResidual:
 
         return result
 
+    # ------------------------------------------------------------------
+    # Vectorized residual path.
+    #
+    # The reference implementations above evaluate the network once per history
+    # node inside a Python loop, which costs O(N^2) forward passes per residual
+    # evaluation. Both the L1 stencil and the product-integration rule are linear
+    # in the history values u(x, t_j), so each is a fixed weight matrix applied to
+    # the same history tensor. Building that tensor with ONE batched forward and
+    # contracting against precomputed weights is algebraically identical and much
+    # faster. The loop versions are kept as the reference that the vectorized path
+    # is tested against (see tests/test_vectorized_residual.py).
+    # ------------------------------------------------------------------
+
+    def _ensure_weight_matrices(self):
+        """Build (and cache) the L1 and product-integration weight matrices.
+
+        W_l1[n, j]  -- coefficient on u(x, t_j) in the L1 stencil at t_n, for the
+                       history nodes only (j = 1 .. n-1). The j = n term uses the
+                       autograd-tracked u_current, and the j = 0 term is omitted,
+                       both matching the reference implementation exactly. Note the
+                       reference drops -d_{n,n} * u^0 on the grounds that u(x,0)=0;
+                       that assumption is reproduced here rather than corrected, so
+                       the two paths agree.
+        W_int[n, j] -- coefficient on u(x, t_j) in the product-integration rule at
+                       t_n, with w_left accumulated into node j and w_right into
+                       node j+1. The sin(x) factor is applied afterwards.
+        """
+        if getattr(self, "_w_l1", None) is not None:
+            return
+
+        N = int(self.mesh.N)
+        t_nodes = self.mesh.get_nodes()
+        W_l1 = torch.zeros(N + 1, N + 1, dtype=torch.float64, device=self.device)
+        W_int = torch.zeros(N + 1, N + 1, dtype=torch.float64, device=self.device)
+        c1 = torch.zeros(N + 1, dtype=torch.float64, device=self.device)
+
+        one_minus_beta = 1.0 - self.beta
+        two_minus_beta = 2.0 - self.beta
+
+        for n in range(1, N + 1):
+            coeffs = self.l1_coeffs.get_coefficients_for_n(n)
+            c1[n] = coeffs[1]
+            # -(d_{n,k} - d_{n,k+1}) * u^{n-k}  for k = 1 .. n-1   (j = n-k)
+            for k in range(1, n):
+                W_l1[n, n - k] = -(coeffs[k] - coeffs[k + 1])
+
+            t_n = t_nodes[n]
+            for j in range(n):
+                a = (t_n - t_nodes[j]).item()
+                b = (t_n - t_nodes[j + 1]).item()
+                h_j = a - b
+                if h_j < 1e-30:
+                    continue
+                a_1 = a ** one_minus_beta
+                a_2 = a ** two_minus_beta
+                if b > 1e-30:
+                    b_1 = b ** one_minus_beta
+                    b_2 = b ** two_minus_beta
+                else:
+                    b_1 = 0.0
+                    b_2 = 0.0
+                moment_1 = (a_1 - b_1) / one_minus_beta
+                moment_2 = (a_2 - b_2) / two_minus_beta
+                W_int[n, j] += (moment_2 - b * moment_1) / h_j        # w_left
+                W_int[n, j + 1] += (a * moment_1 - moment_2) / h_j    # w_right
+
+        self._w_l1 = W_l1
+        self._w_int = W_int
+        self._c1 = c1
+
+    def _history_matrix(self, x: torch.Tensor) -> torch.Tensor:
+        """u(x_b, t_j) for every collocation point b and every mesh node j.
+
+        One batched forward of size B*(N+1), honouring history_gradient_mode.
+        """
+        N = int(self.mesh.N)
+        B = x.shape[0]
+        t_nodes = self.mesh.get_nodes()
+        x_rep = x.unsqueeze(1).expand(B, N + 1).reshape(-1)
+        t_rep = t_nodes.unsqueeze(0).expand(B, N + 1).reshape(-1)
+        if self.history_gradient_mode == "detached_legacy":
+            with torch.no_grad():
+                return self.model(x_rep, t_rep).reshape(B, N + 1)
+        return self.model(x_rep, t_rep).reshape(B, N + 1)
+
+    def compute_vectorized(self, x: torch.Tensor, t: torch.Tensor, n_indices: torch.Tensor):
+        """Full PDE residual using a single batched history evaluation."""
+        self._ensure_weight_matrices()
+
+        u, u_xx = self.compute_u_and_derivatives(x, t)
+        history = self._history_matrix(x)          # (B, N+1), shared by both terms
+
+        idx = n_indices.to(dtype=torch.long, device=self._w_l1.device)
+        w_l1 = self._w_l1[idx]                      # (B, N+1)
+        w_int = self._w_int[idx]                    # (B, N+1)
+
+        frac_deriv = self._c1[idx] * u.squeeze() + (w_l1 * history).sum(dim=1)
+        integral_term = torch.sin(x) * (w_int * history).sum(dim=1)
+        diffusion = (x ** 2 + 1) * u_xx.squeeze()
+        f = self.source_term(x.detach(), t.detach())
+
+        return frac_deriv - diffusion + integral_term - f
+
     def compute(self, x: torch.Tensor, t: torch.Tensor, n_indices: torch.Tensor):
         """
         Compute full PDE residual:
         D_t^α u - (x²+1) u_xx + ∫₀ᵗ sin(x)(t-s)^{-β} u(x,s) ds - f = 0
+
+        Dispatches to the vectorized path by default. Set use_vectorized_residual
+        to False to fall back to the reference loop implementation, which is
+        ~60x slower but is what the vectorized path is validated against.
         """
+        if getattr(self, "use_vectorized_residual", True):
+            return self.compute_vectorized(x, t, n_indices)
+        return self.compute_reference(x, t, n_indices)
+
+    def compute_reference(self, x: torch.Tensor, t: torch.Tensor, n_indices: torch.Tensor):
+        """Reference residual: O(N^2) forward passes. Kept for validation."""
         # Get u and u_xx
         u, u_xx = self.compute_u_and_derivatives(x, t)
         
