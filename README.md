@@ -97,6 +97,43 @@ Classical PINN + PI remains the baseline for fair comparison:
 
 ## Results Snapshot
 
+> ### ⚠️ The tables in this section are superseded. Do not cite them.
+>
+> Every benchmark below was produced with `training.epochs: 12`. Twelve Adam steps
+> at lr 5e-4 leaves the networks essentially at initialization, which is why all
+> the L2 values sit near 1.0 and most Linf values exceed it.
+>
+> **Reference point:** predicting `u == 0` everywhere scores relative L2 = 1.0 by
+> definition, and Linf = max|u_exact| = 1.0 for this problem. Measured against
+> that, 4 of the 5 variants in table (E) have a worst-case error *larger than
+> predicting zero*. The rankings below therefore compare initialization noise,
+> not model quality.
+>
+> Re-running the same pipeline at 600 epochs (3 seeds, matched constant LR)
+> **inverts the ranking**:
+>
+> | Variant | 12 epochs (published) | 600 epochs (mean ± std, 3 seeds) |
+> | --- | ---: | ---: |
+> | Classical + PI | 0.9228 | 0.1759 ± 0.0397 |
+> | Classical + PI + analytic memory | 0.7529 | **0.0322 ± 0.0079** |
+> | TE fixed residual 0.10 + PI | 0.9555 (worst) | 0.0544 ± 0.0188 (2nd) |
+>
+> The TE surrogate goes from worst of the three to second, beating the plain
+> classical baseline by 3.2x (3/3 seeds). The conclusion that TE variants
+> underperform the classical baseline is an artifact of the training budget.
+> Classical+memory still wins (1.7x over TE, 3/3 seeds) and is ~2.5x cheaper per
+> epoch, so the defensible claim is "memory features beat TE at lower cost", not
+> "TE does not help".
+>
+> 600 epochs is itself not converged - it is enough to show the ranking changes,
+> not to fix the final numbers. The configs in `configs/` are now set to 8000
+> epochs with cosine warmup; the `integro-differential-product-integration`
+> branch used 20000 epochs to reach L2 = 1.52%. Regenerate every table below
+> before using any of it.
+>
+> See commits `a39a281` and `a089ed4` for the config, quadrature and CSI fixes.
+
+
 ### A) Adam-Only 5-Seed Comparison (Locked 50x50, Seeds 0..4)
 
 | Variant | Final L2 (mean ± std) | Final Linf (mean ± std) | Final Loss (mean ± std) |
