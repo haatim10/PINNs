@@ -254,7 +254,27 @@ def to_md(payload: Dict) -> str:
             f"{loss['mean']:.6f} ± {loss['std']:.6f} | {rt['mean']:.4f} ± {rt['std']:.4f} | {row['parameter_count']:.0f} | "
             f"{row['accuracy_per_runtime_l2_runtime_product']:.6f} |"
         )
+    lines.append(
+        "| **Zero predictor (u == 0)** | 1.000000 | 1.000000 | 1.000000 | 1.000000 | "
+        "1.000000 | 1.000000 | 1.000000 | 1.000000 | - | 0.0000 | 0 | - |"
+    )
     lines.append("")
+    lines.append(
+        "> **Reference baseline.** Predicting u == 0 everywhere gives relative L2 = 1.0 by "
+        "definition, and Linf = max|u_exact| = 1.0 for this problem. Any variant at or above "
+        "1.0 has not learned the solution, so differences between such variants are not "
+        "meaningful. Check this row before interpreting any ranking below."
+    )
+    lines.append("")
+    n_comp = len(payload["comparisons"])
+    if n_comp > 1:
+        lines.append(
+            f"> **Multiplicity.** {n_comp} paired comparisons are reported below. If they are "
+            f"treated as one family, a Bonferroni threshold is 0.05/{n_comp} = "
+            f"{0.05 / n_comp:.4f}. Report which comparison (if any) was pre-specified as the "
+            "primary endpoint, and correct the rest."
+        )
+        lines.append("")
     lines.append("## Requested Win Counts + Paired Tests")
     lines.append("")
     for comp in payload["comparisons"]:

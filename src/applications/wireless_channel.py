@@ -234,6 +234,67 @@ def make_channel_split(
     }
 
 
+def estimate_doppler_hz(
+    t: np.ndarray,
+    y: np.ndarray,
+    f_min: float = 0.5,
+    f_max: float = 30.0,
+    n_grid: int = 600,
+) -> float:
+    """Estimate the dominant oscillation frequency from TRAINING data only.
+
+    Least-squares (Lomb-Scargle style) periodogram: for each candidate frequency f
+    fit [1, t, sin(2 pi f t), cos(2 pi f t)] and keep the f with the smallest
+    residual. Works for irregular/sparse sampling.
+
+    This exists so the sinusoidal "domain" features use an *estimated* Doppler
+    frequency rather than the generator's true value. Passing the generator's
+    doppler_hz straight into build_channel_features makes the domain-feature
+    comparison circular: cos(2*pi*f*(t-tau)+phi) is an exact linear combination
+    of sin(2*pi*f*t) and cos(2*pi*f*t), so the basis spans the signal by
+    construction. In a real CSI problem the Doppler shift is the unknown.
+    """
+    t = np.asarray(t, dtype=float).ravel()
+    y = np.asarray(y, dtype=float)
+    if y.ndim > 1:
+        y = y[:, 0]
+    if t.size < 4:
+        return float(f_min)
+
+    best_f, best_res = float(f_min), float("inf")
+    for f in np.linspace(float(f_min), float(f_max), int(n_grid)):
+        basis = np.c_[np.ones_like(t), t, np.sin(2.0 * np.pi * f * t), np.cos(2.0 * np.pi * f * t)]
+        coef, *_ = np.linalg.lstsq(basis, y, rcond=None)
+        res = float(np.linalg.norm(y - basis @ coef))
+        if res < best_res:
+            best_res, best_f = res, float(f)
+    return best_f
+
+
+def fit_linear_baseline(
+    train_features: np.ndarray,
+    train_targets: np.ndarray,
+    test_features: np.ndarray,
+) -> np.ndarray:
+    """Ordinary least squares on exactly the feature set the MLPs receive.
+
+    Reported alongside the MLPs so that any claimed neural gain is measured
+    against a linear model on the same features, not against nothing.
+    """
+    train_features = np.atleast_2d(np.asarray(train_features, dtype=float))
+    test_features = np.atleast_2d(np.asarray(test_features, dtype=float))
+    basis = np.c_[np.ones(train_features.shape[0]), train_features]
+    basis_test = np.c_[np.ones(test_features.shape[0]), test_features]
+
+    targets = np.asarray(train_targets, dtype=float)
+    single = targets.ndim == 1
+    if single:
+        targets = targets[:, None]
+    coef, *_ = np.linalg.lstsq(basis, targets, rcond=None)
+    pred = basis_test @ coef
+    return pred[:, 0] if single else pred
+
+
 def build_channel_features(
     t: np.ndarray,
     feature_kind: str,

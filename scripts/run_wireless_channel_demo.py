@@ -27,6 +27,8 @@ from src.applications.wireless_channel import (
     MLPTrainConfig,
     WirelessChannelConfig,
     build_channel_features,
+    estimate_doppler_hz,
+    fit_linear_baseline,
     generate_wireless_channel,
     make_channel_split,
     regression_metrics,
@@ -187,6 +189,14 @@ def run_one_experiment(
         seed=seed,
     )
 
+    # The sinusoidal "domain" features must NOT receive the generator's true
+    # Doppler frequency: cos(2*pi*f*(t-tau)+phi) is an exact linear combination of
+    # sin(2*pi*f*t) and cos(2*pi*f*t), so handing over the true f makes the
+    # domain-feature result circular. Estimate it from the training split only.
+    feature_doppler_hz = estimate_doppler_hz(
+        split["train_t"], split["train_y_noisy"]
+    )
+
     rows: List[Dict] = []
     prediction_payload: Dict[str, np.ndarray] = {}
     curve_payload: Dict[str, List[float]] = {}
@@ -257,7 +267,7 @@ def run_one_experiment(
             split["train_t"],
             feature_kind=feature_kind,
             alpha=alpha_feature,
-            doppler_hz=doppler_hz,
+            doppler_hz=feature_doppler_hz,
             t_start=cfg.t_start,
             t_end=cfg.t_end,
         )
@@ -265,7 +275,7 @@ def run_one_experiment(
             split["test_t"],
             feature_kind=feature_kind,
             alpha=alpha_feature,
-            doppler_hz=doppler_hz,
+            doppler_hz=feature_doppler_hz,
             t_start=cfg.t_start,
             t_end=cfg.t_end,
         )
@@ -312,6 +322,37 @@ def run_one_experiment(
         )
         prediction_payload[model_name] = pred
         curve_payload[model_name] = trained["loss_history"]
+
+        # Linear least squares on the SAME features, so any neural gain is
+        # measured against a linear model rather than against nothing.
+        lin_name = f"linear_{model_name}"
+        pred_lin = fit_linear_baseline(x_train, split["train_y_noisy"], x_test)
+        metrics_lin = regression_metrics(split["test_y_clean"], pred_lin)
+        rows.append(
+            {
+                "mode": mode,
+                "seed": seed,
+                "noise_level": noise_level,
+                "train_setting": float(train_setting),
+                "model": lin_name,
+                "model_label": f"Linear LS ({MODEL_LABELS[model_name]} features)",
+                "feature_family": feature_family,
+                "channel_dim": int(channel_dim),
+                "mse": metrics_lin["mse"],
+                "relative_l2": metrics_lin["relative_l2"],
+                "max_abs_error": metrics_lin["max_abs_error"],
+                "channel_1_relative_l2": metrics_lin.get("channel_1_relative_l2", float("nan")),
+                "channel_2_relative_l2": metrics_lin.get("channel_2_relative_l2", float("nan")),
+                "forecast_window_relative_l2": metrics_lin["relative_l2"] if mode == "forecast" else float("nan"),
+                "runtime_sec": 0.0,
+                "parameter_count": int(np.atleast_2d(x_train).shape[1] + 1),
+                "train_points": int(split["train_t"].shape[0]),
+                "test_points": int(split["test_t"].shape[0]),
+                "device": "cpu",
+                "estimated_doppler_hz": float(feature_doppler_hz),
+            }
+        )
+        prediction_payload[lin_name] = pred_lin
 
     return {
         "config": cfg,

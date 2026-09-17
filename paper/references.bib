@@ -1,76 +1,151 @@
-@misc{PINNs,
-  author       = {TODO},
-  title        = {Physics-Informed Neural Networks: A Deep Learning Framework for Solving Forward and Inverse Problems Involving Nonlinear Partial Differential Equations},
-  year         = {TODO},
-  note         = {TODO: Replace with final bibliographic entry}
+% ---------------------------------------------------------------------------
+% Verified entries.
+% ---------------------------------------------------------------------------
+
+@article{PINNs,
+  author  = {Raissi, M. and Perdikaris, P. and Karniadakis, G. E.},
+  title   = {Physics-informed neural networks: A deep learning framework for
+             solving forward and inverse problems involving nonlinear partial
+             differential equations},
+  journal = {Journal of Computational Physics},
+  volume  = {378},
+  pages   = {686--707},
+  year    = {2019},
+  doi     = {10.1016/j.jcp.2018.10.045}
 }
 
-@misc{FracCalc,
-  author       = {TODO},
-  title        = {Fractional Calculus Reference (Caputo Derivative Background)},
-  year         = {TODO},
-  note         = {TODO: Replace with final bibliographic entry}
+@article{FracPINN,
+  author  = {Pang, Guofei and Lu, Lu and Karniadakis, George Em},
+  title   = {{fPINNs}: Fractional Physics-Informed Neural Networks},
+  journal = {SIAM Journal on Scientific Computing},
+  volume  = {41},
+  number  = {4},
+  pages   = {A2603--A2626},
+  year    = {2019},
+  doi     = {10.1137/18M1229845}
 }
 
-@misc{L1Scheme,
-  author       = {TODO},
-  title        = {L1 Discretization Scheme for Caputo Fractional Derivatives},
-  year         = {TODO},
-  note         = {TODO: Replace with final bibliographic entry}
+@book{FracCalc,
+  author    = {Podlubny, Igor},
+  title     = {Fractional Differential Equations},
+  publisher = {Academic Press},
+  series    = {Mathematics in Science and Engineering},
+  volume    = {198},
+  year      = {1999}
 }
 
-@misc{ProductIntegration,
-  author       = {TODO},
-  title        = {Product Integration Methods for Weakly Singular Volterra Integral Terms},
-  year         = {TODO},
-  note         = {TODO: Replace with final bibliographic entry}
+@article{L1Scheme,
+  author  = {Lin, Yumin and Xu, Chuanju},
+  title   = {Finite difference/spectral approximations for the time-fractional
+             diffusion equation},
+  journal = {Journal of Computational Physics},
+  volume  = {225},
+  number  = {2},
+  pages   = {1533--1552},
+  year    = {2007},
+  doi     = {10.1016/j.jcp.2007.02.001}
 }
 
-@misc{FracPINN,
-  author       = {TODO},
-  title        = {Fractional PINNs for Time-Fractional Differential and Integro-Differential Equations},
-  year         = {TODO},
-  note         = {TODO: Replace with final bibliographic entry}
+@article{GradedMesh,
+  author  = {Stynes, Martin and O'Riordan, Eugene and Gracia, Jos\'{e} Luis},
+  title   = {Error Analysis of a Finite Difference Method on Graded Meshes for a
+             Time-Fractional Diffusion Equation},
+  journal = {SIAM Journal on Numerical Analysis},
+  volume  = {55},
+  number  = {2},
+  pages   = {1057--1079},
+  year    = {2017},
+  doi     = {10.1137/16M1082329},
+  note    = {Establishes the optimal grading exponent r = (2-alpha)/alpha.}
 }
 
-@misc{QNN,
-  author       = {TODO},
-  title        = {Variational Quantum Neural Networks / Hybrid Quantum-Classical Learning},
-  year         = {TODO},
-  note         = {TODO: Replace with final bibliographic entry}
+@book{ProductIntegration,
+  author    = {Linz, Peter},
+  title     = {Analytical and Numerical Methods for Volterra Equations},
+  publisher = {SIAM},
+  series    = {Studies in Applied Mathematics},
+  year      = {1985},
+  doi       = {10.1137/1.9781611970852}
 }
+
+@book{VolterraCollocation,
+  author    = {Brunner, Hermann},
+  title     = {Collocation Methods for Volterra Integral and Related Functional
+               Differential Equations},
+  publisher = {Cambridge University Press},
+  year      = {2004},
+  doi       = {10.1017/CBO9780511543234}
+}
+
+@article{TEQPINN,
+  author  = {Berger, Simon and Hosters, Norbert and M\"{o}ller, Matthias},
+  title   = {Trainable embedding quantum physics informed neural networks for
+             solving nonlinear {PDEs}},
+  journal = {Scientific Reports},
+  volume  = {15},
+  pages   = {18823},
+  year    = {2025},
+  doi     = {10.1038/s41598-025-02959-z}
+}
+
+@article{QNN,
+  author  = {Benedetti, Marcello and Lloyd, Erika and Sack, Stefan and
+             Fiorentini, Mattia},
+  title   = {Parameterized quantum circuits as machine learning models},
+  journal = {Quantum Science and Technology},
+  volume  = {4},
+  number  = {4},
+  pages   = {043001},
+  year    = {2019},
+  doi     = {10.1088/2058-9565/ab4eb5}
+}
+
+@article{FourierFeatures,
+  author  = {Tancik, Matthew and Srinivasan, Pratul P. and Mildenhall, Ben and
+             Fridovich-Keil, Sara and Raghavan, Nithin and Singhal, Utkarsh and
+             Ramamoorthi, Ravi and Barron, Jonathan T. and Ng, Ren},
+  title   = {Fourier Features Let Networks Learn High Frequency Functions in Low
+             Dimensional Domains},
+  journal = {Advances in Neural Information Processing Systems (NeurIPS)},
+  volume  = {33},
+  year    = {2020},
+  note    = {Relevant related work: the TE surrogate's sin/cos feature map with
+             learned frequencies is a learned Fourier-feature model.}
+}
+
+% ---------------------------------------------------------------------------
+% STILL TO FILL IN. Deliberately left as placeholders rather than guessed --
+% do not submit with these unresolved. Pick the specific works you actually
+% relied on; the descriptions say what each slot is for.
+% ---------------------------------------------------------------------------
 
 @misc{QPINN,
-  author       = {TODO},
-  title        = {Quantum Physics-Informed Neural Networks},
-  year         = {TODO},
-  note         = {TODO: Replace with final bibliographic entry}
-}
-
-@misc{TEQPINN,
-  author       = {TODO},
-  title        = {Trainable Embedding Quantum Physics-Informed Neural Networks for Solving Nonlinear PDEs},
-  year         = {2025},
-  note         = {Scientific Reports; TODO: Add full citation details}
+  author = {NEEDS CITATION},
+  title  = {Quantum physics-informed neural networks},
+  note   = {Slot for the general QPINN reference (pre-TE hybrid quantum PINN
+            work). Candidate: Markidis, "On physics-informed neural networks for
+            quantum computers", Frontiers in Applied Mathematics and Statistics,
+            2022 -- verify volume/article number before use.},
+  year   = {NEEDS CITATION}
 }
 
 @misc{CSI,
-  author       = {TODO},
-  title        = {Channel State Information Prediction and Estimation in Wireless Systems},
-  year         = {TODO},
-  note         = {TODO: Replace with final bibliographic entry}
+  author = {NEEDS CITATION},
+  title  = {Channel state information prediction and estimation in wireless systems},
+  note   = {Slot for the CSI prediction reference motivating Section IX.},
+  year   = {NEEDS CITATION}
 }
 
 @misc{MIMO,
-  author       = {TODO},
-  title        = {MIMO Channel Modeling and Forecasting References},
-  year         = {TODO},
-  note         = {TODO: Replace with final bibliographic entry}
+  author = {NEEDS CITATION},
+  title  = {MIMO channel modeling and forecasting},
+  note   = {Slot for the MIMO channel-model reference behind the two-channel demo.},
+  year   = {NEEDS CITATION}
 }
 
 @misc{LEO,
-  author       = {TODO},
-  title        = {LEO Satellite Channel Dynamics and Prediction Motivation},
-  year         = {TODO},
-  note         = {TODO: Replace with final bibliographic entry}
+  author = {NEEDS CITATION},
+  title  = {LEO satellite channel dynamics and prediction},
+  note   = {Slot for the LEO motivation cited in the introduction.},
+  year   = {NEEDS CITATION}
 }

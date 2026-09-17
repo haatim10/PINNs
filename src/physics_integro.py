@@ -16,7 +16,7 @@ represent the standard branch problem and a harder oscillatory variant.
 
 import torch
 import numpy as np
-from scipy.special import gamma
+from scipy.special import gamma, roots_jacobi
 
 
 def resolve_solution_config(solution_cfg: dict | None, alpha: float) -> dict:
@@ -316,62 +316,59 @@ class IntegroDifferentialResidual:
     
     def compute_integral_term_quadrature(self, x: torch.Tensor, t: torch.Tensor, n_indices: torch.Tensor):
         """
-        Alternative: Gauss-Jacobi quadrature for weakly singular integral.
-        
-        Transform: let s = t*τ, then ∫₀ᵗ (t-s)^{-β} u(x,s) ds = t^{1-β} ∫₀¹ (1-τ)^{-β} u(x,tτ) dτ
-        
-        Use Gauss-Jacobi quadrature with weight (1-τ)^{-β}.
+        Reference quadrature for the weakly singular integral, using true Gauss-Jacobi.
+
+        Transform: s = t*tau, so
+            int_0^t (t-s)^{-beta} u(x,s) ds = t^{1-beta} int_0^1 (1-tau)^{-beta} u(x, t*tau) dtau
+
+        The singular factor (1-tau)^{-beta} is absorbed into the Gauss-Jacobi weight
+        function, so the rule integrates the smooth remainder u(x, t*tau) to degree 2n-1.
+
+        NOTE: the previous implementation used Gauss-Legendre and evaluated the singular
+        kernel pointwise. That stagnates around 1e-2 regardless of refinement, which made
+        it useless as a convergence reference for the product-integration rule.
         """
         batch_size = x.shape[0]
         result = torch.zeros(batch_size, dtype=torch.float64, device=self.device)
-        
-        # Get Gauss-Jacobi nodes and weights for weight function (1-τ)^{-β} on [0,1]
-        # For simplicity, use Gauss-Legendre and absorb singularity
-        from numpy.polynomial.legendre import leggauss
-        nodes, weights = leggauss(self.n_quad)
-        
-        # Transform from [-1,1] to [0,1]
-        nodes = (nodes + 1) / 2
-        weights = weights / 2
-        
+
+        # Nodes/weights on [-1,1] for weight (1-z)^{-beta} (1+z)^0.
+        z, w = roots_jacobi(self.n_quad, -self.beta, 0.0)
+        # Map to [0,1]: tau=(z+1)/2 and int_0^1 (1-tau)^{-b} g dtau = 2^{b-1} sum_i w_i g(tau_i)
+        taus = (z + 1.0) / 2.0
+        weights = (2.0 ** (self.beta - 1.0)) * w
+
         unique_n = torch.unique(n_indices)
         t_nodes_mesh = self.mesh.get_nodes()
-        
+
         for n in unique_n:
             n_val = n.item()
             if n_val == 0:
                 continue
-                
+
             mask = (n_indices == n_val)
             x_n = x[mask]
             t_n = t_nodes_mesh[n_val].item()
             num_points = x_n.shape[0]
-            
+
             if num_points == 0:
                 continue
-            
+
             sin_x = torch.sin(x_n)
-            
-            # Compute integral using quadrature
+            scale = t_n ** (1.0 - self.beta)
+
             integral_sum = torch.zeros(num_points, dtype=torch.float64, device=self.device)
-            
-            for i, (tau, w) in enumerate(zip(nodes, weights)):
-                s = t_n * tau
-                
-                # Kernel: (t-s)^{-β} = (t_n - t_n*τ)^{-β} = t_n^{-β} * (1-τ)^{-β}
-                # Full integrand factor: t_n * (t_n - s)^{-β} = t_n^{1-β} * (1-τ)^{-β}
-                kernel = (t_n ** (1 - self.beta)) * ((1 - tau) ** (-self.beta))
-                
-                # Evaluate u(x, s) = u(x, t_n * τ)
-                s_tensor = torch.tensor(s, dtype=torch.float64, device=self.device).expand(num_points)
+            for tau, wq in zip(taus, weights):
+                s_tensor = torch.full(
+                    (num_points,), t_n * float(tau),
+                    dtype=torch.float64, device=self.device
+                )
                 u_s = self._history_model_eval(x_n, s_tensor)
-                
-                integral_sum = integral_sum + w * kernel * u_s
-            
-            result[mask] = sin_x * integral_sum
-            
+                integral_sum = integral_sum + float(wq) * u_s
+
+            result[mask] = sin_x * scale * integral_sum
+
         return result
-    
+
     def compute(self, x: torch.Tensor, t: torch.Tensor, n_indices: torch.Tensor):
         """
         Compute full PDE residual:
@@ -448,16 +445,27 @@ class IntegralConvergenceMonitor:
             'integral_linf_error': [],
         }
     
-    def compute_reference_integral(self, x: torch.Tensor, t: torch.Tensor, 
+    #: Gauss-Jacobi order used for the reference rule. Must be well above the
+    #: working n_quad, otherwise the "reference" is less accurate than the
+    #: product-integration rule it is meant to validate.
+    REFERENCE_N_QUAD = 80
+
+    def compute_reference_integral(self, x: torch.Tensor, t: torch.Tensor,
                                    n_indices: torch.Tensor) -> torch.Tensor:
         """
-        Approximate the integral using refined product integration 
-        (finer mesh as reference).
-        
-        Uses the alternative quadrature-based routine as a reference estimate.
+        High-order Gauss-Jacobi reference for the weakly singular integral.
+
+        Temporarily raises the quadrature order so the reference is strictly more
+        accurate than the product-integration rule under test. With the working
+        n_quad this comparison is not meaningful once the mesh is refined.
         """
-        with torch.no_grad():
-            return self.residual.compute_integral_term_quadrature(x, t, n_indices)
+        working_n_quad = self.residual.n_quad
+        try:
+            self.residual.n_quad = max(int(self.REFERENCE_N_QUAD), int(working_n_quad) * 4)
+            with torch.no_grad():
+                return self.residual.compute_integral_term_quadrature(x, t, n_indices)
+        finally:
+            self.residual.n_quad = working_n_quad
     
     def log_convergence(self, epoch: int, x_test: torch.Tensor, t_test: torch.Tensor,
                        n_test: torch.Tensor, log_file: str = None):
