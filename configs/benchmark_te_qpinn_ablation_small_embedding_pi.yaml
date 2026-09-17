@@ -47,12 +47,12 @@ network:
     residual_scale: 0.10
 
 training:
-  epochs: 12
+  epochs: 8000
   learning_rate: 0.001
   scheduler:
-    enabled: false
+    enabled: true
     type: cosine_warmup
-    warmup_epochs: 1
+    warmup_epochs: 500
     min_lr: 0.00001
   lbfgs:
     enabled: false
@@ -66,7 +66,7 @@ training:
     ic: 20.0
 
 logging:
-  eval_interval: 1
+  eval_interval: 250
   checkpoint_interval: 1000
   track_points: false
   points_file: outputs/benchmarks/te_qpinn/unused_points.csv
