@@ -9,39 +9,41 @@
 \begin{document}
 
 \title{Memory-Aware Feature Design Dominates Quantum-Inspired\\
-Architecture in Physics-Informed Solvers for\\
-Time-Fractional Integro-Differential Equations}
+Architecture in Physics-Informed Solvers\\
+for Time-Fractional Integro-Differential Equations}
 
-\author{Author~Name~Placeholder%
-\thanks{Department / Lab Placeholder, Institution Placeholder, City, Country
-(e-mail: email@placeholder.edu).}}
+\author{Abdullah~Haatim%
+\thanks{The author is with the Department of Electronics, Birla Institute of
+Technology and Science, Pilani, Pilani, India
+(e-mail: f20220519@pilani.bits-pilani.ac.in).}}
 
 \maketitle
 
 \begin{abstract}
-Physics-informed neural networks (PINNs) for time-fractional integro-differential
-equations must approximate a nonlocal Caputo derivative and a weakly singular
-Volterra memory term, and their accuracy is sensitive both to the numerical
-treatment of those operators and to the representation given to the network. We
-benchmark a classical PINN, a trainable-embedding quantum-inspired (TE) surrogate,
-and analytic memory-aware input features on a manufactured fractional
-integro-differential problem, under a fairness-controlled protocol with matched
-parameter budgets, matched collocation points, and ten seeds per variant. A
-classical-plus-memory control isolates feature-level gains from architecture-level
-gains. Analytic memory features are the dominant effect: they reduce final relative
-$L_2$ error by $8.66\times$ over the classical baseline ($10/10$ seeds,
-$p=0.0020$). The TE surrogate also helps independently of features
-($1.96\times$ over the classical baseline, $10/10$, $p=0.0020$), and the combined
-TE-plus-memory model is the strongest variant overall
-($0.00262\pm0.00081$). Its margin over the classical-plus-memory control is
-$1.58\times$ ($9/10$, $p=0.0488$) at the primary operating point, which does not
-clear a Bonferroni threshold for five comparisons, and $1.64\times$ ($9/10$,
-$p=0.0098$) at an altered fractional setting $(\alpha,\beta)=(0.7,0.3)$. A
-post-quantum LayerNorm variant is indistinguishable from the plain TE surrogate
-($p=0.4922$). We report a zero-predictor reference ($u\equiv0$, relative
-$L_2=1$) alongside every table, and we make no claim of quantum advantage: the TE
-model is a classical surrogate whose sinusoidal feature map has learned,
-input-dependent frequencies.
+Physics-informed neural networks for time-fractional integro-differential
+equations must approximate a nonlocal Caputo derivative together with a weakly
+singular Volterra memory term, and their accuracy depends both on the numerical
+treatment of those operators and on the representation given to the network.
+Architecture-level proposals, including quantum-inspired trainable-embedding
+designs, and feature-level priors that encode fractional-memory structure are
+frequently introduced together, which makes it difficult to attribute any observed
+gain to one or the other. This letter separates them. We benchmark a classical
+solver, a quantum-inspired trainable-embedding surrogate, and analytic
+memory-aware input features on a manufactured fractional integro-differential
+problem under a fairness-controlled protocol with matched parameter budgets,
+matched collocation budgets, and repeated seeds, and we add a control whose only
+difference from the classical baseline is the input representation. Analytic
+memory features emerge as the dominant effect, improving accuracy by substantially
+more than any architectural change we tested, and the improvement holds on both
+the classical and the quantum-inspired track. The trainable-embedding surrogate
+contributes a smaller but independent gain under matched inputs, and the combined
+model is the strongest variant, although its advantage over the
+representation-matched control is not established at the primary operating point.
+A normalization variant intended to stabilize the surrogate is found to be
+indistinguishable from the surrogate itself. Conclusions are reported against an
+explicit zero-predictor reference and are shown to depend on training to
+convergence. No claim of quantum advantage is made: the surrogate is classical,
+and its sinusoidal feature map has learned, input-dependent frequencies.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -55,33 +57,67 @@ networks, memory-aware features.
 for neural solvers. Their operators are nonlocal in time, so the state at $t$
 depends on accumulated history rather than on local derivatives alone, and the
 kernels involved are weakly singular. Automatic differentiation cannot express a
-Caputo derivative directly, so PINNs for such problems must embed a numerical
-history operator inside the residual \cite{PINNs,FracPINN}.
+Caputo derivative directly, so physics-informed neural networks (PINNs) for such
+problems must embed a numerical history operator inside the residual
+\cite{PINNs,FracPINN}.
 
 Two directions have been proposed for improving on a baseline PINN in this
-setting: architecture-level changes, of which trainable-embedding quantum
-physics-informed neural networks (TE-QPINNs) are a recent instance
-\cite{QNN,TEQPINN}, and feature-level priors that encode fractional-memory
-structure directly in the network input. These are frequently conflated. A
-quantum-inspired architecture evaluated against a plain baseline can appear to
-succeed when the gain in fact comes from an accompanying change of input
-representation.
+setting. The first is architecture-level: trainable-embedding quantum
+physics-informed neural networks (TE-QPINNs) are a recent instance, in which a
+learned embedding drives an angle-encoded feature map \cite{QNN,TEQPINN}. The
+second is feature-level: analytic priors that place fractional-memory structure
+directly in the network input. These are frequently introduced together, and the
+consequence is an attribution problem. A quantum-inspired architecture evaluated
+against a plain baseline can appear to succeed when the gain in fact comes from an
+accompanying change of input representation, and nothing in such a comparison
+distinguishes the two explanations.
 
-This letter separates the two. We evaluate four variants against a classical
+PINNs were introduced for forward and inverse problems governed by nonlinear PDEs
+\cite{PINNs}, and were extended to fractional operators by replacing the
+inexpressible derivative with a numerical discretization inside the residual
+\cite{FracPINN}. That substitution is what makes the present setting distinctive:
+the residual is no longer local, so the cost and the accuracy of the solver are
+both governed by how the history is treated. The L1 scheme on a graded mesh is the
+standard device for the Caputo term when the solution has a weak singularity at
+the origin, and the grading exponent controls the attainable order
+\cite{L1Scheme,GradedMesh}. For the weakly singular Volterra term, product
+integration handles the kernel analytically instead of resolving it by quadrature
+\cite{ProductIntegration,VolterraCollocation}. On the architecture side, hybrid
+quantum-classical models parameterize a circuit or an emulation of one
+\cite{QNN}, and trainable-embedding variants learn the encoding rather than fixing
+it \cite{TEQPINN}. Sinusoidal encodings of this kind are closely related to
+Fourier-feature models in classical deep learning \cite{FourierFeatures}, a
+connection we return to below.
+
+This letter separates them. Four variants are evaluated against a classical
 baseline under one residual construction, matched parameter counts, matched
-collocation budgets, and ten seeds, and we add a \emph{classical-plus-memory}
-control whose only difference from the baseline is the input representation. This
-control is what makes the attribution possible, and it is absent from most
-quantum-inspired PINN comparisons.
+collocation budgets, and ten seeds. The decisive addition is a
+\emph{classical-plus-memory} control whose only difference from the baseline is
+the input representation: the architecture, the residual, the sampling, and the
+loss weights are unchanged. Any accuracy this control recovers is attributable to
+representation alone, and whatever the quantum-inspired surrogate achieves beyond
+it is attributable to architecture. This control is absent from most
+quantum-inspired PINN comparisons, and it is what makes the attribution possible.
 
-Our contributions are: (i) a fairness-controlled benchmark that separates
+The contributions are a fairness-controlled benchmark that separates
 feature-level from architecture-level gains on a fractional integro-differential
-problem; (ii) evidence that analytic memory features are the dominant effect,
-larger than any architectural change we tested; (iii) evidence that the TE
-surrogate contributes an independent and smaller gain, with the combined model
-strongest overall; and (iv) a negative result for post-quantum LayerNorm
-stabilization. We report all comparisons against an explicit zero-predictor
-reference, which we argue should be standard practice in this literature.
+problem; an attribution of most of the available improvement to the input
+representation rather than to the architecture; a smaller but independent
+architectural gain under matched inputs; a negative result for the normalization
+variant intended to stabilize the surrogate; and a protocol argument that
+comparisons of this kind should carry both a representation-matched control and
+an explicit zero-predictor reference.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.92\textwidth]{figures/fig_midsem_baseline_surface.png}
+\caption{Qualitative view of the manufactured problem: the exact field
+$t^{\alpha}\cos(\pi x)$, a representative classical PINN fit, and the absolute
+error surface. The error concentrates near $t=0$, where the temporal derivative of
+the solution is singular, and near the spatial boundaries. This figure orients the
+reader on the problem and is not one of the benchmarked runs.}
+\label{fig:field}
+\end{figure*}
 
 \section{Problem and Residual Construction}
 
@@ -106,13 +142,24 @@ t^{\alpha}\cos(\pi x)$, with $f$ derived analytically under the full operator, s
 that final $L_2$ and $L_\infty$ errors are computable exactly and identically
 across variants.
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_method_pipeline.png}
+\caption{Shared residual engine and the two model tracks. The Caputo/L1 and
+product-integration operators, the collocation sampling, and the loss weights are
+identical across variants; only the input representation and the network
+architecture change.}
+\label{fig:pipeline}
+\end{figure}
+
 \subsection{Discretization}
 The Caputo term uses an L1 approximation on a graded temporal mesh
 $t_n=T(n/N)^{r}$ with $r\ge1$ \cite{L1Scheme,GradedMesh}, which concentrates nodes
-near $t=0$ where the solution's temporal derivative is singular. The Volterra term
-uses kernel-aware product integration: on each interval $[t_j,t_{j+1}]$ the
-solution is interpolated linearly while the singular kernel moments
-$\int\tau^{-\beta}d\tau$ and $\int\tau^{1-\beta}d\tau$ are integrated analytically
+near $t=0$ where the temporal derivative of the solution is singular. The Volterra
+term uses kernel-aware product
+integration: on each interval $[t_j,t_{j+1}]$ the solution is interpolated
+linearly while the singular kernel moments $\int\tau^{-\beta}d\tau$ and
+$\int\tau^{1-\beta}d\tau$ are integrated analytically
 \cite{ProductIntegration,VolterraCollocation}, giving
 \begin{equation}
 \mathcal{I}_n[u](x)\approx\sum_{j=0}^{n}w_{n,j}\,\hat u(x,t_j),
@@ -120,40 +167,40 @@ $\int\tau^{-\beta}d\tau$ and $\int\tau^{1-\beta}d\tau$ are integrated analytical
 \end{equation}
 with weights $w_{n,j}$ depending only on the mesh and $\beta$. Verified against
 the exact Beta-function value for $u=s^{\alpha}$, this rule converges at second
-order (error $1.19\times10^{-4}\!\to\!1.91\times10^{-6}$ for
-$N_t=25\!\to\!200$), whereas applying Gauss--Legendre quadrature to the singular
-integrand stagnates near $1.7\times10^{-2}$ regardless of refinement.
+order, whereas applying Gauss--Legendre quadrature to the singular integrand
+stagnates near $10^{-2}$ regardless of mesh refinement and is therefore unusable
+as a reference.
 
 Both the L1 stencil and \eqref{eq:prodint} are linear in the history values
-$u(x,t_j)$. Each is therefore a fixed weight matrix applied to one history
-tensor, which we assemble with a single batched network evaluation rather than one
-evaluation per history node. This is algebraically exact --- residuals and
-parameter gradients agree with the naive loop to $1.8\times10^{-15}$ and
-$1.8\times10^{-14}$ respectively --- and reduces residual cost by about $60\times$
-per step, which is what makes a ten-seed protocol at a converged budget practical.
+$u(x,t_j)$. Each is therefore a fixed weight matrix applied to one history tensor,
+which we assemble with a single batched network evaluation rather than one
+evaluation per history node. The rearrangement is algebraically exact: residuals
+and parameter gradients agree with the naive loop to floating-point precision. It
+reduces residual cost by about two orders of magnitude, which is what makes a
+ten-seed protocol at a converged budget practical on modest hardware.
 
 The network minimizes
 $\mathcal{L}=\lambda_{\mathrm{pde}}\mathcal{L}_{\mathrm{pde}}+
 \lambda_{\mathrm{bc}}\mathcal{L}_{\mathrm{bc}}+
-\lambda_{\mathrm{ic}}\mathcal{L}_{\mathrm{ic}}$ with fixed weights across all
+\lambda_{\mathrm{ic}}\mathcal{L}_{\mathrm{ic}}$ with weights held fixed across all
 variants.
 
 \section{Model Variants}
 
-\subsection{TE-Inspired Surrogate}
-The TE surrogate is a classical PyTorch model that emulates TE-QPINN design ideas
+\subsection{Trainable-Embedding Surrogate}
+The surrogate is a classical model that emulates TE-QPINN design ideas
 \cite{TEQPINN} without a quantum circuit. Inputs are affine-rescaled; a trainable
 embedding network produces $\phi_i$, from which angle-style coordinates
 $\theta_i=\phi_i(x,t)\,\tilde z_i$ are formed against cycled input coordinates. The
-feature map is $[\sin\theta,\cos\theta]$ augmented with pairwise terms
+feature map is $[\sin\theta,\cos\theta]$, augmented with pairwise terms
 $\sin(\theta_i)\cos(\theta_{i+1})$, followed by a mixing block and an
 expectation-style readout with an optional residual branch.
 
 We state plainly what this is: a multilayer perceptron on a sinusoidal feature map
-whose frequencies are learned and input-dependent, i.e.\ a learned Fourier-feature
-model \cite{FourierFeatures}. The pairwise terms are products of independently
-computed scalars and therefore factorize; they are degree-two interaction features,
-not entanglement. No quantum hardware or simulator is used in the results below,
+whose frequencies are learned and input-dependent, that is, a learned
+Fourier-feature model \cite{FourierFeatures}. The pairwise terms are products of
+independently computed scalars and therefore factorize; they are degree-two
+interaction features, not entanglement. No quantum hardware or simulator is used,
 and no quantum advantage is claimed.
 
 \subsection{Analytic Memory Features}
@@ -164,33 +211,40 @@ The memory-aware variants replace the input $(x,t)$ with
 \end{equation}
 evaluated at $t_{\mathrm{safe}}=\max(t,\epsilon)$ with $\epsilon=10^{-8}$ and
 normalized by deterministic, analytically derived per-feature bounds rather than
-batch statistics, so train and evaluation behavior coincide. The powers
+batch statistics, so that training and evaluation behavior coincide. The powers
 $t^{\alpha}$, $t^{1-\alpha}$, $t^{1-\beta}$ are motivated by the regularity theory
 for time-fractional problems, which predicts $t^{\alpha}$-type behavior near the
-origin \cite{GradedMesh}. The same feature builder is shared by the classical and
-TE tracks, so no implementation asymmetry is introduced.
+origin \cite{GradedMesh}. The same feature builder is shared by both tracks, so no
+implementation asymmetry is introduced.
 
 \section{Experimental Protocol}
 All variants share \eqref{eq:pde}, the residual construction, the collocation and
 boundary sampling, and the loss weights; only representation and architecture
-change. The core setting is a $50\times50$ discretization with mesh grading
-$r=2$, $\alpha=\beta=0.5$, and parameter counts matched within $11\%$
-($2241$--$2498$). Every variant is trained for $8000$ Adam epochs with cosine
-warmup, and each is run on the same ten seeds
-$\{0,1,2,3,4,42,123,999,2024,2025\}$. Errors are evaluated on a uniform
-$100\times100$ grid independent of the graded training mesh, and the reported
-value is the error of the final model state, not the best observed during
-training.
+change. The core setting is a $50\times50$ discretization with mesh grading $r=2$,
+$\alpha=\beta=0.5$, and parameter counts matched within $11\%$. Every variant is
+trained for $8000$ Adam epochs with cosine warmup over $500$ epochs, learning rate
+$5\times10^{-4}$ decaying to $10^{-5}$, and each is run on the same ten seeds
+$\{0,1,2,3,4,42,123,999,2024,2025\}$. The classical networks use three hidden
+layers of width $32$; the surrogate uses a comparable embedding and mixing width
+chosen to match parameter count. Each step draws $32$ interior collocation points,
+$16$ boundary points and $16$ initial points, with deterministic per-seed
+sampling so that two variants at the same seed see the same points. Boundary
+values are taken from the exact solution, since the problem is
+non-homogeneous. Errors are evaluated on a uniform $100\times100$ grid independent
+of the graded training mesh, over $t\in[10^{-10},1]$ to avoid the degenerate norm
+at $t=0$, and the reported value is the error of the final model state, not the
+best observed during training. Runs are single-threaded on CPU, which makes the
+reported runtimes comparable across variants.
 
 We report paired Wilcoxon signed-rank tests on final $L_2$ over the shared seeds,
 bootstrap $95\%$ confidence intervals on the mean paired difference, and paired
-effect sizes. With five comparisons, a Bonferroni threshold is $0.05/5=0.01$; we
-state explicitly which comparisons clear it.
+effect sizes. With five comparisons a Bonferroni threshold is $0.01$, and we state
+explicitly which comparisons clear it.
 
 \emph{Zero-predictor reference.} Predicting $u\equiv0$ gives relative $L_2=1$ by
-definition, and $L_\infty=\max|u_{\mathrm{exact}}|=1$ here. Any variant at or
-above that line has not learned the solution, and differences among such variants
-are not meaningful. We include this row in every table.
+definition, and $L_\infty=\max|u_{\mathrm{exact}}|=1$ here. Any variant at or above
+that line has not learned the solution, and differences among such variants are
+not meaningful. This row is included in the results table.
 
 \section{Results}
 
@@ -215,12 +269,20 @@ Zero predictor     & $1.00000$ & $1.0000$ & --- & ---\\
 \end{tabular}
 \end{table}
 
+\subsection{Feature-Level Versus Architecture-Level Gains}
+Table~\ref{tab:main} gives the primary result. Every variant now sits one to two
+orders of magnitude below the zero-predictor line, so the ordering reflects
+solution quality rather than residual noise. Because the residual engine,
+collocation sampling and loss weights are common to all variants
+(Fig.~\ref{fig:pipeline}), the differences below are attributable to
+representation and architecture alone.
+
 \begin{table}[t]
-\caption{Paired tests on final $L_2$, ten shared seeds. Bonferroni threshold for
-five comparisons is $0.01$.}
+\caption{Paired tests on final $L_2$, ten shared seeds. The Bonferroni threshold
+for five comparisons is $0.01$.}
 \label{tab:paired}
 \centering
-\small
+\footnotesize
 \begin{tabular}{@{}lcccc@{}}
 \toprule
 Comparison (A vs B) & Ratio & Wins & $p$ & $d$\\
@@ -234,94 +296,117 @@ TE+LayerNorm vs TE fixed   & $1.04\times$ & $7/10$  & $0.4922$ & $-0.18$\\
 \end{tabular}
 \end{table}
 
+Table~\ref{tab:paired} gives the paired comparisons. The largest single effect is
+the input representation: the classical-plus-memory control improves on the
+classical baseline by $8.66\times$ on every seed, with $p=0.0020$ and $d=-4.44$.
+The same feature set produces a comparable $6.99\times$ improvement on the
+surrogate track. Both clear the Bonferroni threshold comfortably. Because the
+control differs from the baseline in the input alone, this improvement is
+attributable to representation and not to architecture.
+
+The surrogate architecture also contributes independently of features: with
+identical $(x,t)$ inputs, it improves on the classical baseline by $1.96\times$ on
+every seed, again at $p=0.0020$. This is a genuine architectural effect, but it is
+roughly a quarter the size of the feature effect.
+
+The combined model is strongest overall. Its margin over the
+representation-matched control is $1.58\times$, winning $9$ of $10$ seeds at
+$p=0.0488$. We do not treat this as established: it does not clear the Bonferroni
+threshold of $0.01$, and the bootstrap interval, while excluding zero, is narrow
+relative to the effect. The combined model is also the more expensive of the two,
+at roughly twice the per-epoch cost. We therefore report it as the leading variant
+rather than as a demonstrated win.
+
+Worst-case error behaves consistently with the mean. The $L_\infty$ column of
+Table~\ref{tab:main} orders the variants identically to $L_2$ and spans roughly an
+order of magnitude across them, so the ranking is not an artifact of averaging
+over the evaluation grid. This matters here because the error field is not
+uniform: as Fig.~\ref{fig:field} shows, it concentrates near $t=0$ and at the
+spatial boundaries, so a method could in principle reduce mean error while leaving
+the worst-case behavior unchanged. That does not occur for any variant tested.
+
+\subsection{Stabilization}
+The normalization variant is not supported. Against the plain surrogate it gives
+$1.04\times$, wins $7$ of $10$ seeds, and reaches $p=0.4922$, with a bootstrap
+interval spanning zero. At a converged budget it is indistinguishable from the
+variant it was intended to stabilize.
+
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figures/fig_results_8000ep.png}
-\caption{Final relative $L_2$ error (mean $\pm$ std over ten seeds) at both
-fractional settings. Memory features move a variant roughly an order of magnitude;
-the TE architecture contributes a smaller additional gain. The ordering is
-preserved at $(\alpha,\beta)=(0.7,0.3)$.}
+\caption{Final relative $L_2$ error, mean $\pm$ standard deviation over ten seeds,
+at both fractional settings. Memory features move a variant by roughly an order of
+magnitude; the surrogate architecture contributes a smaller additional gain. The
+ordering is preserved at the altered setting.}
 \label{fig:results}
 \end{figure}
 
-\subsection{Feature-Level Versus Architecture-Level Gains}
-Table~\ref{tab:main} gives the primary result and Table~\ref{tab:paired} the
-paired comparisons. The largest single effect is the input representation:
-classical-plus-memory improves on the classical baseline by $8.66\times$ on every
-seed, with $p=0.0020$ and $d=-4.44$. The same feature set produces a comparable
-$6.99\times$ improvement on the TE track. Both clear the Bonferroni threshold
-comfortably.
-
-The TE architecture also contributes independently of features: with identical
-$(x,t)$ inputs, the TE surrogate improves on the classical baseline by
-$1.96\times$ on every seed ($p=0.0020$). This is a genuine architectural effect,
-but it is roughly a quarter the size of the feature effect.
-
-The combined TE-plus-memory model is strongest overall. Its margin over the
-classical-plus-memory control is $1.58\times$, winning $9/10$ seeds with
-$p=0.0488$. We do not treat this as established: it does not clear the Bonferroni
-threshold of $0.01$, and the bootstrap interval
-$[-0.00266,-0.00041]$, while excluding zero, is narrow relative to the effect. It
-is also the more expensive model, at roughly twice the per-epoch cost of
-classical-plus-memory. We therefore report it as the leading variant rather than
-as a demonstrated win.
-
-\subsection{Stabilization}
-Post-quantum LayerNorm is not supported. Against the plain TE surrogate it gives
-$1.04\times$, wins $7/10$, and $p=0.4922$, with a bootstrap interval spanning
-zero. At a converged budget it is indistinguishable from the variant it was
-intended to stabilize.
-
 \subsection{Robustness}
 Repeating the full ten-seed protocol at $(\alpha,\beta)=(0.7,0.3)$ preserves the
-ordering (Fig.~\ref{fig:results}): TE+memory $0.00375\pm0.00061$,
-classical+memory $0.00617\pm0.00335$, TE+LayerNorm $0.01277\pm0.00215$, TE fixed
-$0.01439\pm0.00258$, classical $0.04731\pm0.00985$. Memory features again dominate
-($7.67\times$, $10/10$, $p=0.0020$) and the TE architecture again contributes
-independently ($3.29\times$, $10/10$, $p=0.0020$). Notably the TE+memory margin
-over classical+memory is stronger here than at the primary setting
-($1.64\times$, $9/10$, $p=0.0098$), clearing the threshold that it missed above.
+ordering, as Fig.~\ref{fig:results} shows alongside the primary setting. Memory
+features again dominate, at $7.67\times$ over the classical baseline on all ten
+seeds with $p=0.0020$, and the surrogate architecture again contributes
+independently, at $3.29\times$ on all ten seeds with $p=0.0020$. The margin of the
+combined model over the representation-matched control is stronger here than at
+the primary setting, at $1.64\times$ on $9$ of $10$ seeds with $p=0.0098$,
+clearing the threshold that it missed above.
 
 \subsection{Sensitivity to Training Budget}
-The conclusions above depend on training to convergence, and we note this because
-it changes them. Under a severely truncated budget of $12$ epochs all five
-variants score at or above the zero-predictor line (final $L_2$ between $0.75$ and
-$0.96$; four of five with $L_\infty>1$), and the ordering inverts: the TE
-surrogate appears \emph{worst} of the group rather than second. Rankings obtained
-in that regime measure initialization noise. This is a concrete argument for
-reporting the zero-predictor reference: it makes such a regime immediately visible.
+The conclusions above depend on training to convergence, and we record this
+because it changes them. Under a severely truncated budget of $12$ epochs all five
+variants score at or above the zero-predictor line, with final $L_2$ between
+$0.75$ and $0.96$ and four of five exceeding it in $L_\infty$, and the ordering
+inverts: the surrogate appears worst of the group rather than second. Rankings
+obtained in that regime measure initialization noise rather than model quality.
+This is a concrete argument for reporting the zero-predictor reference, which
+makes such a regime immediately visible.
 
 \section{Limitations}
 The memory feature set contains $t^{\alpha}$, which is exactly the temporal factor
 of the manufactured solution. A linear least-squares fit on the eight features
-alone reaches relative $L_2=0.124$, against $0.362$ for $(x,t)$, so roughly a
-factor of $2.9$ of the measured advantage is available before any network is
-trained. The trained advantage is $8.66\times$ and therefore not explained by this
-alone, but the benchmark is favorable to the feature set, and the effect should be
-expected to shrink on problems whose time dependence is not $t^{\alpha}$. We
-regard including $t^{\alpha}$ as principled --- $\alpha$ is a known coefficient of
-\eqref{eq:pde} and the regularity theory predicts this behavior --- but the
-caveat belongs with the number.
+alone reaches a relative $L_2$ of $0.124$, against $0.362$ for $(x,t)$, so roughly
+a factor of three of the measured advantage is available before any network is
+trained. The trained advantage is $8.66\times$ and is therefore not explained by
+this alone, but the benchmark is favorable to the feature set, and the effect
+should be expected to shrink on problems whose time dependence is not
+$t^{\alpha}$. We regard including $t^{\alpha}$ as principled, since $\alpha$ is a
+known coefficient of \eqref{eq:pde} and the regularity theory predicts this
+behavior, but the caveat belongs with the number.
 
 Results are for one problem family, one spatial discretization, and two
 $(\alpha,\beta)$ settings. Ten seeds bound the achievable Wilcoxon $p$ from below
 at $0.002$, which is adequate for the large effects but marginal for the
-TE-versus-classical-memory comparison. All comparisons are equal-epoch; on an
-equal-runtime basis the TE variants are penalized by roughly a factor of two.
+comparison between the combined model and the representation-matched control. All
+comparisons are equal-epoch; on an equal-runtime basis the surrogate variants are
+penalized by roughly a factor of two.
+
+Finally, the architectural gain reported here is specific to the surrogate as
+described. Because the model is a learned Fourier-feature network, its advantage
+over a plain multilayer perceptron may be reproducible by other sinusoidal
+encodings that carry no quantum motivation at all; we have not separated those
+possibilities, and doing so would sharpen the attribution further.
+
+\emph{Reproducibility.} All variants are driven from declarative configuration
+files that fix the discretization, the architecture, the optimizer schedule and
+the seed list, so each reported run is reproducible from its configuration alone.
+The per-seed results underlying both tables and the figure are released as
+machine-readable records rather than only as summary statistics, which allows the
+paired tests to be recomputed independently.
 
 \section{Conclusion}
 Under a fairness-controlled ten-seed protocol at a converged budget, analytic
 memory-aware input features are the dominant source of accuracy improvement for
 PINNs on a time-fractional integro-differential problem, exceeding any
-architectural change we tested by roughly a factor of four. A quantum-inspired
-trainable-embedding surrogate contributes a smaller but real and independent gain,
-and the combined model is strongest overall, though its margin over the
-classical-plus-memory control is not established at the primary operating point.
-Post-quantum LayerNorm stabilization is not supported. We recommend that
-comparisons of this kind carry both a representation-matched control and an
-explicit zero-predictor reference; without the first, feature-engineering gains are
-readily misattributed to architecture, and without the second, rankings can be
-reported from a regime in which no model has learned the solution.
+architectural change tested here by roughly a factor of four. A quantum-inspired
+trainable-embedding surrogate contributes a smaller but real and independent gain
+under matched inputs, and the combined model is strongest overall, although its
+margin over the representation-matched control is not established at the primary
+operating point. The normalization variant intended to stabilize the surrogate is
+not supported. We recommend that comparisons of this kind carry both a
+representation-matched control and an explicit zero-predictor reference. Without
+the first, feature-engineering gains are readily misattributed to architecture;
+without the second, rankings can be reported from a regime in which no model has
+learned the solution.
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}
